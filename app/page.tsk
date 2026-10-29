@@ -10,7 +10,6 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true)
-    // Check if the user has already seen the intro in this session
     const hasSeen = sessionStorage.getItem('hasSeenIntro')
     if (!hasSeen) {
       setShowIntro(true)
@@ -22,18 +21,14 @@ export default function Home() {
     setShowIntro(false)
   }
 
-  // Prevent hydration mismatch
   if (!mounted) return null
 
   return (
     <>
-      {/* 3D Cinematic Intro */}
       {showIntro && <CinematicIntro onComplete={handleIntroComplete} />}
       
-      {/* Main Homepage Container */}
       <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
         
-        {/* 1. The Background Video */}
         <video
           autoPlay
           loop
@@ -41,24 +36,19 @@ export default function Home() {
           playsInline
           className="absolute top-0 left-0 w-full h-full object-cover z-0"
         >
-          {/* Make sure this file exists in your public/videos folder */}
           <source src="/videos/bg-video.mp4" type="video/mp4" />
         </video>
 
-        {/* 2. The Dark Overlay (Keeps text readable) */}
         <div className="absolute top-0 left-0 w-full h-full bg-black/70 z-10"></div>
 
-        {/* 3. The Foreground Content */}
         <div className="relative z-20 text-center px-4 max-w-4xl mx-auto flex flex-col items-center">
           
-          {/* Company Logo (Make sure logo.png is in your public folder) */}
           <img 
             src="/logo.png" 
             alt="Evolved Tech Logo" 
             className="w-24 h-24 object-contain mb-8 drop-shadow-[0_0_20px_rgba(0,163,255,0.8)]" 
           />
           
-          {/* Headline */}
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 text-white leading-tight">
             Build the future with <br className="hidden md:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A3FF] to-[#E2E8F0]">
@@ -66,12 +56,10 @@ export default function Home() {
             </span>
           </h1>
           
-          {/* Subheadline */}
           <p className="text-xl md:text-2xl text-gray-300 mb-10 max-w-2xl font-light">
             From Lagos to the world. We build browser-first tools, platforms, and games. Home of Limn Engine.
           </p>
           
-          {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             <Link 
               href="/feed" 
@@ -87,7 +75,6 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Link to About Page */}
           <Link 
             href="/about" 
             className="mt-10 text-gray-400 hover:text-white underline underline-offset-8 decoration-[#00A3FF]/50 hover:decoration-[#00A3FF] transition-all"
