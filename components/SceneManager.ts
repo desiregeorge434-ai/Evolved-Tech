@@ -9,7 +9,7 @@ export class SceneManager {
   private planets: Planet[] = []
   private animationFrameId: number = 0
   private clock: THREE.Clock
-  private sunSprite: THREE.Sprite
+  private sunSprite!: THREE.Sprite
 
   constructor(mountElement: HTMLDivElement) {
     this.scene = new THREE.Scene()
