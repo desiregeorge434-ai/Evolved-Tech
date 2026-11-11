@@ -12,6 +12,11 @@ type Props = { onComplete: () => void }
 
 const BLUE = 0x00a3ff
 
+const CONSTELLATIONS = [
+  'ORION', 'LYRA', 'CYGNUS', 'DRACO', 'PERSEUS', 'CEPHEUS',
+  'AQUILA', 'CASSIOPEIA', 'PEGASUS', 'ANDROMEDA', 'TAURUS', 'LEO',
+]
+
 function radialTexture(stops: Array<[number, string]>): THREE.CanvasTexture {
   const s = 512
   const c = document.createElement('canvas')
@@ -32,7 +37,6 @@ function ringTexture(): THREE.CanvasTexture {
   c.width = w
   c.height = 8
   const ctx = c.getContext('2d')!
-  ctx.clearRect(0, 0, w, 8)
   for (let x = 0; x < w; x++) {
     const t = x / w
     const band = Math.sin(t * 90) * 0.5 + 0.5
@@ -68,12 +72,8 @@ function streetTexture(): THREE.CanvasTexture {
     ctx.stroke()
   }
   for (let i = 0; i < 260; i++) {
-    const x = Math.random() * s
-    const y = Math.random() * s
-    const w = 6 + Math.random() * 22
-    const h = 6 + Math.random() * 22
     ctx.fillStyle = `rgba(90,150,210,${0.02 + Math.random() * 0.05})`
-    ctx.fillRect(x, y, w, h)
+    ctx.fillRect(Math.random() * s, Math.random() * s, 6 + Math.random() * 22, 6 + Math.random() * 22)
   }
   const t = new THREE.CanvasTexture(c)
   t.colorSpace = THREE.SRGBColorSpace
@@ -127,14 +127,14 @@ function insideEllipse(x: number, z: number, cx: number, cz: number, rx: number,
 }
 
 const BODIES = [
-  { name: 'Mercury', radius: 0.55, orbit: 16, speed: 0.20, tilt: 0.02, map: '/mercury.png' },
-  { name: 'Venus', radius: 1.0, orbit: 22, speed: 0.15, tilt: 0.06, map: '/venus.png' },
-  { name: 'Earth', radius: 1.55, orbit: 30, speed: 0.10, tilt: 0.41, map: '/earth-day.png' },
-  { name: 'Mars', radius: 0.85, orbit: 38, speed: 0.08, tilt: 0.05, map: '/mars.png' },
-  { name: 'Jupiter', radius: 3.2, orbit: 52, speed: 0.045, tilt: 0.05, map: '/jupiter.jpg' },
-  { name: 'Saturn', radius: 2.6, orbit: 66, speed: 0.032, tilt: 0.47, map: '/saturn.png', ring: true },
-  { name: 'Uranus', radius: 1.7, orbit: 78, speed: 0.022, tilt: 0.97, map: '/uranus.png' },
-  { name: 'Neptune', radius: 1.65, orbit: 90, speed: 0.016, tilt: 0.49, map: '/neptune.png' },
+  { name: 'MERCURY', radius: 0.55, orbit: 16, speed: 0.20, tilt: 0.02, map: '/mercury.png' },
+  { name: 'VENUS', radius: 1.0, orbit: 22, speed: 0.15, tilt: 0.06, map: '/venus.png' },
+  { name: 'EARTH', radius: 1.55, orbit: 30, speed: 0.10, tilt: 0.41, map: '/earth-day.png' },
+  { name: 'MARS', radius: 0.85, orbit: 38, speed: 0.08, tilt: 0.05, map: '/mars.png' },
+  { name: 'JUPITER', radius: 3.2, orbit: 52, speed: 0.045, tilt: 0.05, map: '/jupiter.jpg' },
+  { name: 'SATURN', radius: 2.6, orbit: 66, speed: 0.032, tilt: 0.47, map: '/saturn.png', ring: true },
+  { name: 'URANUS', radius: 1.7, orbit: 78, speed: 0.022, tilt: 0.97, map: '/uranus.png' },
+  { name: 'NEPTUNE', radius: 1.65, orbit: 90, speed: 0.016, tilt: 0.49, map: '/neptune.png' },
 ]
 
 export function CinematicIntro({ onComplete }: Props) {
@@ -173,7 +173,7 @@ export function CinematicIntro({ onComplete }: Props) {
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.05
+    renderer.toneMappingExposure = 1.0
     host.appendChild(renderer.domElement)
 
     const disposables: Array<{ dispose: () => void }> = []
@@ -187,29 +187,54 @@ export function CinematicIntro({ onComplete }: Props) {
       const tex = loader.load(url)
       tex.colorSpace = THREE.SRGBColorSpace
       tex.anisotropy = 2
-      if (url.includes('milky-way')) tex.mapping = THREE.EquirectangularReflectionMapping
       return track(tex)
     }
 
+    const makeLabel = (text: string, color: string, size: number) => {
+      const fs = 44
+      const pad = 12
+      const measure = document.createElement('canvas').getContext('2d')!
+      measure.font = `600 ${fs}px system-ui, sans-serif`
+      const w = Math.ceil(measure.measureText(text).width) + pad * 2
+      const h = fs + pad * 2
+      const c = document.createElement('canvas')
+      c.width = w
+      c.height = h
+      const ctx = c.getContext('2d')!
+      ctx.font = `600 ${fs}px system-ui, sans-serif`
+      ctx.fillStyle = color
+      ctx.textBaseline = 'middle'
+      ctx.fillText(text, pad, h / 2)
+      const tex = track(new THREE.CanvasTexture(c))
+      tex.colorSpace = THREE.SRGBColorSpace
+      const mat = track(new THREE.SpriteMaterial({
+        map: tex, transparent: true, depthWrite: false, depthTest: false,
+        sizeAttenuation: false, opacity: 0.75,
+      }))
+      const spr = new THREE.Sprite(mat)
+      spr.scale.set((w / h) * size, size, 1)
+      return spr
+    }
+
     const space = new THREE.Scene()
+    space.background = new THREE.Color(0x000104)
+
     const composer = useBloom ? new EffectComposer(renderer) : null
     if (composer) {
       composer.setPixelRatio(pixelRatio)
       composer.setSize(window.innerWidth, window.innerHeight)
     }
 
-    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 6000)
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 8000)
     camera.position.set(0, 14, 120)
-
-    space.background = loadTex('/milky-way.jpg')
-    space.backgroundIntensity = 0.55
 
     const starSprite = track(radialTexture([
       [0, 'rgba(255,255,255,1)'],
-      [0.4, 'rgba(255,255,255,0.35)'],
+      [0.35, 'rgba(255,255,255,0.4)'],
       [1, 'rgba(255,255,255,0)'],
     ]))
 
+    const starPositions: Float32Array[] = []
     const makeStars = (count: number, rMin: number, rMax: number, size: number, opacity: number) => {
       const pos = new Float32Array(count * 3)
       const col = new Float32Array(count * 3)
@@ -220,11 +245,12 @@ export function CinematicIntro({ onComplete }: Props) {
         pos[i * 3] = r * Math.sin(phi) * Math.cos(theta)
         pos[i * 3 + 1] = r * Math.cos(phi)
         pos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta)
-        const tint = 0.75 + Math.random() * 0.25
+        const tint = 0.78 + Math.random() * 0.22
         col[i * 3] = tint
         col[i * 3 + 1] = tint
-        col[i * 3 + 2] = Math.min(1, tint + Math.random() * 0.15)
+        col[i * 3 + 2] = Math.min(1, tint + Math.random() * 0.12)
       }
+      starPositions.push(pos)
       const geo = track(new THREE.BufferGeometry())
       geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
       geo.setAttribute('color', new THREE.BufferAttribute(col, 3))
@@ -237,18 +263,57 @@ export function CinematicIntro({ onComplete }: Props) {
       space.add(pts)
       return pts
     }
-    const starsNear = makeStars(1400, 200, 460, 2.4, 0.95)
-    const starsFar = makeStars(2200, 700, 1500, 4.5, 0.5)
+    makeStars(1500, 260, 520, 2.6, 0.95)
+    const starsFar = makeStars(2400, 800, 2200, 5.0, 0.55)
+
+    const constellationGroup = new THREE.Group()
+    space.add(constellationGroup)
+    {
+      const R = 2400
+      const lineVerts: number[] = []
+      const up = new THREE.Vector3(0, 1, 0)
+      CONSTELLATIONS.forEach((name) => {
+        const dir = new THREE.Vector3(
+          Math.random() * 2 - 1,
+          Math.random() * 2 - 1,
+          Math.random() * 2 - 1
+        ).normalize()
+        const t1 = new THREE.Vector3().crossVectors(dir, up)
+        if (t1.lengthSq() < 0.01) t1.set(1, 0, 0)
+        t1.normalize()
+        const t2 = new THREE.Vector3().crossVectors(dir, t1).normalize()
+
+        const n = 5 + Math.floor(Math.random() * 3)
+        const pts: THREE.Vector3[] = []
+        for (let i = 0; i < n; i++) {
+          const a = (i / (n - 1) - 0.5) * 0.20 + (Math.random() - 0.5) * 0.04
+          const b = (Math.random() - 0.5) * 0.12
+          pts.push(dir.clone().addScaledVector(t1, a).addScaledVector(t2, b).normalize().multiplyScalar(R))
+        }
+        for (let i = 0; i < pts.length - 1; i++) {
+          lineVerts.push(pts[i].x, pts[i].y, pts[i].z, pts[i + 1].x, pts[i + 1].y, pts[i + 1].z)
+        }
+        const label = makeLabel(name, '#9ec9f0', 0.022)
+        label.position.copy(pts[Math.floor(pts.length / 2)]).multiplyScalar(0.97)
+        constellationGroup.add(label)
+      })
+
+      const geo = track(new THREE.BufferGeometry())
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(lineVerts, 3))
+      constellationGroup.add(new THREE.LineSegments(geo, track(new THREE.LineBasicMaterial({
+        color: 0x6fa8d8, transparent: true, opacity: 0.28,
+      }))))
+    }
 
     const sunGroup = new THREE.Group()
     space.add(sunGroup)
 
     const sunMat = track(new THREE.MeshBasicMaterial({ map: loadTex('/sun.jpg'), color: 0xffffff }))
-    const sunCore = new THREE.Mesh(track(new THREE.SphereGeometry(4.2, 64, 64)), sunMat)
+    const sunCore = new THREE.Mesh(track(new THREE.SphereGeometry(3.6, 64, 64)), sunMat)
     sunGroup.add(sunCore)
 
     const coronaMat = new THREE.ShaderMaterial({
-      uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(0xff9a3c) } },
+      uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(0xffe7c2) } },
       vertexShader: `
         varying vec3 vNormal;
         varying vec3 vView;
@@ -265,10 +330,10 @@ export function CinematicIntro({ onComplete }: Props) {
         varying vec3 vNormal;
         varying vec3 vView;
         void main() {
-          float f = pow(1.0 - abs(dot(normalize(vView), normalize(vNormal))), 3.0);
-          float flick = 0.82 + 0.18 * sin(uTime * 1.9) * sin(uTime * 0.7 + 1.3);
-          float a = f * flick;
-          gl_FragColor = vec4(uColor * a * 2.2, a);
+          float f = pow(1.0 - abs(dot(normalize(vView), normalize(vNormal))), 2.6);
+          float flick = 0.88 + 0.12 * sin(uTime * 2.1) * sin(uTime * 0.8 + 1.1);
+          float a = f * flick * 0.55;
+          gl_FragColor = vec4(uColor * a, a);
         }
       `,
       transparent: true,
@@ -276,37 +341,50 @@ export function CinematicIntro({ onComplete }: Props) {
       depthWrite: false,
     })
     track(coronaMat)
-    const corona = new THREE.Mesh(track(new THREE.SphereGeometry(5.6, 48, 48)), coronaMat)
+    const corona = new THREE.Mesh(track(new THREE.SphereGeometry(4.6, 48, 48)), coronaMat)
     sunGroup.add(corona)
 
     const flare = new THREE.Sprite(track(new THREE.SpriteMaterial({
       map: track(radialTexture([
         [0, 'rgba(255,255,255,1)'],
-        [0.15, 'rgba(255,240,200,0.7)'],
-        [0.45, 'rgba(255,170,60,0.18)'],
-        [1, 'rgba(255,120,0,0)'],
+        [0.1, 'rgba(255,252,240,0.85)'],
+        [0.3, 'rgba(255,226,170,0.25)'],
+        [1, 'rgba(255,200,120,0)'],
       ])),
-      blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.55,
+      blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.9,
     })))
-    flare.scale.setScalar(34)
+    flare.scale.setScalar(30)
     sunGroup.add(flare)
 
-    sunGroup.add(new THREE.PointLight(0xfff2d8, 3.4, 0, 0))
-    space.add(new THREE.AmbientLight(0x1a2436, 1.5))
+    sunGroup.add(new THREE.PointLight(0xfff6e6, 3.6, 0, 0))
+    space.add(new THREE.AmbientLight(0x141c2a, 1.3))
 
-    type Planet = { mesh: THREE.Mesh; angle: number; orbit: number; speed: number; tilt: number; spin: number }
+    type Planet = { mesh: THREE.Mesh; label: THREE.Sprite; angle: number; orbit: number; speed: number; tilt: number; spin: number }
     const planets: Planet[] = []
     let earthMesh: THREE.Mesh | null = null
     let earthAtmosphere: THREE.ShaderMaterial | null = null
 
     BODIES.forEach((body, i) => {
+      const orbitPts: THREE.Vector3[] = []
+      for (let s = 0; s <= 220; s++) {
+        const a = (s / 220) * Math.PI * 2
+        orbitPts.push(new THREE.Vector3(Math.cos(a) * body.orbit, 0, Math.sin(a) * body.orbit))
+      }
+      const orbitGeo = track(new THREE.BufferGeometry().setFromPoints(orbitPts))
+      space.add(new THREE.Line(orbitGeo, track(new THREE.LineBasicMaterial({
+        color: 0x3f6f9e, transparent: true, opacity: 0.2,
+      }))))
+
       const geo = track(new THREE.SphereGeometry(body.radius, 64, 64))
       const mat = track(new THREE.MeshStandardMaterial({
-        map: loadTex(body.map), color: 0xffffff, roughness: 0.92, metalness: 0.02,
+        map: loadTex(body.map), roughness: 0.92, metalness: 0.02,
       }))
       const mesh = new THREE.Mesh(geo, mat)
       mesh.rotation.z = body.tilt
       space.add(mesh)
+
+      const label = makeLabel(body.name, '#a8cbe8', 0.016)
+      space.add(label)
 
       if (body.ring) {
         const ringGeo = track(new THREE.RingGeometry(body.radius * 1.5, body.radius * 2.55, 128))
@@ -326,6 +404,7 @@ export function CinematicIntro({ onComplete }: Props) {
 
       planets.push({
         mesh,
+        label,
         angle: (i / BODIES.length) * Math.PI * 2,
         orbit: body.orbit,
         speed: body.speed,
@@ -333,11 +412,11 @@ export function CinematicIntro({ onComplete }: Props) {
         spin: 0.05 + Math.random() * 0.06,
       })
 
-      if (body.name === 'Earth') {
+      if (body.name === 'EARTH') {
         earthMesh = mesh
         const atmoMat = new THREE.ShaderMaterial({
           uniforms: {
-            uColor: { value: new THREE.Color(0x3aa0ff) },
+            uColor: { value: new THREE.Color(0x4aa8ff) },
             uPower: { value: 3.2 },
             uIntensity: { value: 1.0 },
           },
@@ -380,7 +459,7 @@ export function CinematicIntro({ onComplete }: Props) {
 
     const belt = new THREE.Group()
     space.add(belt)
-    const BELT = isSmall ? 90 : 200
+    const BELT = isSmall ? 70 : 140
     const asteroids = new THREE.InstancedMesh(rockGeo, rockMat, BELT)
     {
       const mm = new THREE.Matrix4()
@@ -390,9 +469,9 @@ export function CinematicIntro({ onComplete }: Props) {
       const ss = new THREE.Vector3()
       for (let i = 0; i < BELT; i++) {
         const a = Math.random() * Math.PI * 2
-        const r = 44 + Math.random() * 18
-        const scl = 0.2 + Math.pow(Math.random(), 2.2) * 1.9
-        vv.set(Math.cos(a) * r, (Math.random() - 0.5) * 9, Math.sin(a) * r)
+        const r = 44 + Math.random() * 16
+        const scl = 0.2 + Math.pow(Math.random(), 2.2) * 1.7
+        vv.set(Math.cos(a) * r, (Math.random() - 0.5) * 8, Math.sin(a) * r)
         ee.set(Math.random() * 6.28, Math.random() * 6.28, Math.random() * 6.28)
         qq.setFromEuler(ee)
         ss.set(scl, scl * (0.7 + Math.random() * 0.6), scl)
@@ -403,78 +482,12 @@ export function CinematicIntro({ onComplete }: Props) {
     }
     belt.add(asteroids)
 
-    const tailMat = new THREE.ShaderMaterial({
-      uniforms: { uColor: { value: new THREE.Color(0x9fd8ff) } },
-      vertexShader: `
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform vec3 uColor;
-        varying vec2 vUv;
-        void main() {
-          float a = pow(clamp(vUv.y, 0.0, 1.0), 1.7) * 0.55;
-          gl_FragColor = vec4(uColor, a);
-        }
-      `,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    })
-    track(tailMat)
-
-    const headTex = track(radialTexture([
-      [0, 'rgba(255,255,255,1)'],
-      [0.2, 'rgba(190,230,255,0.75)'],
-      [0.5, 'rgba(120,190,255,0.22)'],
-      [1, 'rgba(80,150,255,0)'],
-    ]))
-
-    type Comet = { group: THREE.Group; from: THREE.Vector3; to: THREE.Vector3; t0: number; t1: number }
-    const comets: Comet[] = []
-
-    const makeComet = (from: THREE.Vector3, to: THREE.Vector3, t0: number, t1: number, scale: number) => {
-      const group = new THREE.Group()
-      const head = new THREE.Sprite(track(new THREE.SpriteMaterial({
-        map: headTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.95,
-      })))
-      head.scale.setScalar(2.6 * scale)
-      group.add(head)
-
-      const tail = new THREE.Mesh(track(new THREE.ConeGeometry(1.1 * scale, 30 * scale, 14, 1, true)), tailMat)
-      tail.rotation.x = Math.PI / 2
-      tail.position.z = -15 * scale
-      group.add(tail)
-
-      group.visible = false
-      space.add(group)
-      comets.push({ group, from, to, t0, t1 })
-    }
-
-    makeComet(
-      new THREE.Vector3(-150, 60, -40),
-      new THREE.Vector3(160, -30, 30),
-      1.2, 5.2, 1.6
-    )
-    makeComet(
-      new THREE.Vector3(120, -50, 90),
-      new THREE.Vector3(-140, 30, -20),
-      3.0, 6.0, 1.1
-    )
-
-    type Flyby = { mesh: THREE.Mesh; from: THREE.Vector3; to: THREE.Vector3; t0: number; t1: number }
-    const flybys: Flyby[] = []
-
     const path = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 18, 130),
-      new THREE.Vector3(30, -8, 92),
-      new THREE.Vector3(-32, 12, 68),
-      new THREE.Vector3(20, 4, 46),
-      new THREE.Vector3(-10, 0, 30),
+      new THREE.Vector3(0, 16, 135),
+      new THREE.Vector3(34, -10, 96),
+      new THREE.Vector3(-36, 14, 70),
+      new THREE.Vector3(22, 4, 48),
+      new THREE.Vector3(-8, 0, 32),
     ])
 
     const T_SPACE = 6.0
@@ -485,6 +498,9 @@ export function CinematicIntro({ onComplete }: Props) {
     const state = { u: 0, approach: 0, lagos: 0, phase: 'space' as 'space' | 'approach' | 'lagos' }
     let approachFrom = new THREE.Vector3()
     let approachTo = new THREE.Vector3()
+
+    type Flyby = { mesh: THREE.Mesh; from: THREE.Vector3; to: THREE.Vector3; t0: number; t1: number }
+    const flybys: Flyby[] = []
 
     ;[2.6, 5.0].forEach((t, i) => {
       const u = THREE.MathUtils.clamp(t / T_SPACE, 0, 1)
@@ -554,7 +570,7 @@ export function CinematicIntro({ onComplete }: Props) {
     bridge2.rotation.y = -0.32
     lagos.add(bridge2)
 
-    const BUILDINGS = isSmall ? 400 : 950
+    const BUILDINGS = isSmall ? 380 : 900
     const cityMat = track(new THREE.MeshStandardMaterial({
       color: 0x0b1420,
       emissive: 0xffffff,
@@ -653,6 +669,7 @@ export function CinematicIntro({ onComplete }: Props) {
     const smoothTarget = new THREE.Vector3(0, 0, 0)
     const desiredTarget = new THREE.Vector3(0, 0, 0)
     const axisY = new THREE.Vector3(0, 1, 0)
+    const labelOffset = new THREE.Vector3()
 
     const shake = (t: number) => {
       const x = Math.sin(t * 0.83) * 0.5 + Math.sin(t * 2.11) * 0.28 + Math.sin(t * 3.71) * 0.12
@@ -667,30 +684,20 @@ export function CinematicIntro({ onComplete }: Props) {
         p.mesh.position.set(Math.cos(a) * p.orbit, 0, Math.sin(a) * p.orbit)
         p.mesh.rotation.z = p.tilt
         p.mesh.rotateOnAxis(axisY, p.spin * 0.02)
+        labelOffset.copy(p.mesh.position).multiplyScalar(1.06)
+        labelOffset.y += p.mesh.geometry.boundingSphere
+          ? p.mesh.geometry.boundingSphere.radius * 1.9
+          : 2
+        p.label.position.copy(labelOffset)
       })
 
       belt.rotation.y = t * 0.012
       asteroids.rotation.y = t * 0.02
+      constellationGroup.rotation.y = t * 0.0025
 
       coronaMat.uniforms.uTime.value = t
-      corona.scale.setScalar(1 + Math.sin(t * 1.3) * 0.02)
-      flare.material.opacity = 0.5 + Math.sin(t * 0.9) * 0.06
-      starsNear.rotation.y = t * 0.006
+      corona.scale.setScalar(1 + Math.sin(t * 1.3) * 0.015)
       starsFar.rotation.y = t * 0.002
-
-      comets.forEach((c) => {
-        const k = THREE.MathUtils.clamp((t - c.t0) / (c.t1 - c.t0), 0, 1)
-        c.group.visible = k > 0 && k < 1
-        if (!c.group.visible) return
-        c.group.position.lerpVectors(c.from, c.to, k)
-        const dir = c.to.clone().sub(c.from).normalize()
-        c.group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), dir)
-        const fade = Math.sin(Math.PI * k)
-        c.group.children.forEach((child) => {
-          const mat = (child as THREE.Mesh).material as THREE.Material & { opacity?: number }
-          if ('opacity' in mat) mat.opacity = fade
-        })
-      })
 
       flybys.forEach((f) => {
         const k = THREE.MathUtils.clamp((t - f.t0) / (f.t1 - f.t0), 0, 1)
@@ -702,14 +709,17 @@ export function CinematicIntro({ onComplete }: Props) {
         }
       })
 
-      let amp = 0.35
+      let amp = 0.4
 
       if (state.phase === 'space') {
         const u = THREE.MathUtils.clamp(state.u, 0, 1)
         cam.position.copy(path.getPointAt(u))
         const towardEarth = THREE.MathUtils.smoothstep(u, 0.62, 1)
-        desiredTarget.lerpVectors(new THREE.Vector3(0, 0, 0), earthMesh ? earthMesh.position : new THREE.Vector3(), towardEarth)
-        amp = 0.4
+        desiredTarget.lerpVectors(
+          new THREE.Vector3(0, 0, 0),
+          earthMesh ? earthMesh.position : new THREE.Vector3(),
+          towardEarth
+        )
         if (cam.fov !== 55) {
           cam.fov = 55
           cam.updateProjectionMatrix()
@@ -778,7 +788,7 @@ export function CinematicIntro({ onComplete }: Props) {
     if (composer) {
       composer.addPass(new RenderPass(space, camera))
       composer.addPass(new UnrealBloomPass(
-        new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2), 0.8, 0.65, 0.66
+        new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2), 0.9, 0.6, 0.72
       ))
       composer.addPass(new OutputPass())
     }
