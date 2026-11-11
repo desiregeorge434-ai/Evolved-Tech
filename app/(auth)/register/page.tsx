@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Loader2, Mail, Lock, User, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { AuthPanel } from '@/components/AuthPanel'
+import { GoogleButton } from '@/components/GoogleButton'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -16,7 +17,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
 
@@ -99,6 +100,14 @@ export default function RegisterPage() {
         </>
       }
     >
+      <GoogleButton label="Sign up with Google" />
+
+      <div className="my-6 flex items-center gap-4">
+        <span className="h-px flex-1 bg-white/[0.08]" />
+        <span className="text-[10px] uppercase tracking-[0.2em] text-white/25">or</span>
+        <span className="h-px flex-1 bg-white/[0.08]" />
+      </div>
+
       <form onSubmit={submit} className="space-y-4">
         <Field
           icon={<User size={15} />}
@@ -145,10 +154,6 @@ export default function RegisterPage() {
         </button>
       </form>
 
-      <p className="mt-5 text-[11px] leading-relaxed text-white/25">
-        By creating an account you agree to keep it human. No spam, no resale, no nonsense.
-      </p>
-
       <Link
         href="/"
         className="mt-5 inline-flex items-center gap-1.5 text-xs text-white/35 transition-colors hover:text-white"
@@ -169,7 +174,7 @@ function Field({
   placeholder,
   autoComplete,
 }: {
-  icon: React.ReactNode
+  icon: ReactNode
   label: string
   type: string
   value: string

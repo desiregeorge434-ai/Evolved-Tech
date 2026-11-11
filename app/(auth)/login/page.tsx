@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Loader2, Mail, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { AuthPanel } from '@/components/AuthPanel'
+import { GoogleButton } from '@/components/GoogleButton'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -21,7 +22,7 @@ export default function LoginPage() {
     if (target && target.startsWith('/')) setNext(target)
   }, [])
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
@@ -56,6 +57,14 @@ export default function LoginPage() {
         </>
       }
     >
+      <GoogleButton />
+
+      <div className="my-6 flex items-center gap-4">
+        <span className="h-px flex-1 bg-white/[0.08]" />
+        <span className="text-[10px] uppercase tracking-[0.2em] text-white/25">or</span>
+        <span className="h-px flex-1 bg-white/[0.08]" />
+      </div>
+
       <form onSubmit={submit} className="space-y-4">
         <Field
           icon={<Mail size={15} />}
@@ -113,7 +122,7 @@ function Field({
   placeholder,
   autoComplete,
 }: {
-  icon: React.ReactNode
+  icon: ReactNode
   label: string
   type: string
   value: string
