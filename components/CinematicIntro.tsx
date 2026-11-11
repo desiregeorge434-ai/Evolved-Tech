@@ -11,7 +11,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 type Props = { onComplete: () => void }
 
 const BLUE = 0x00a3ff
-const TAGLINE = 'DRAWING YOUR GAMES INTO EXISTENCE'
+const TAGLINE = 'THE POWER OF MAKING GAMES'
 
 const CONSTELLATIONS = [
   'ORION', 'LYRA', 'CYGNUS', 'DRACO', 'PERSEUS', 'CEPHEUS',
@@ -171,6 +171,8 @@ export function CinematicIntro({ onComplete }: Props) {
   const skipRef = useRef<HTMLButtonElement>(null)
   const barsRef = useRef<HTMLDivElement>(null)
   const phraseRef = useRef<HTMLDivElement>(null)
+  const phraseRuleRef = useRef<HTMLDivElement>(null)
+  const phraseKickerRef = useRef<HTMLParagraphElement>(null)
   const logoMainRef = useRef<HTMLImageElement>(null)
   const logoRedRef = useRef<HTMLImageElement>(null)
   const logoCyanRef = useRef<HTMLImageElement>(null)
@@ -364,7 +366,7 @@ export function CinematicIntro({ onComplete }: Props) {
     sunGroup.add(new THREE.PointLight(0xfff6e6, 3.6, 0, 0))
     space.add(new THREE.AmbientLight(0x141c2a, 1.3))
 
-    type Planet = { mesh: THREE.Mesh; label: THREE.Sprite; angle: number; orbit: number; speed: number; tilt: number; spin: number }
+    type Planet = { mesh: THREE.Mesh; label: THREE.Sprite; radius: number; angle: number; orbit: number; speed: number; tilt: number; spin: number }
     const planets: Planet[] = []
     let earthMesh: THREE.Mesh | null = null
     let earthClouds: THREE.Mesh | null = null
@@ -411,6 +413,7 @@ export function CinematicIntro({ onComplete }: Props) {
       planets.push({
         mesh,
         label,
+        radius: body.radius,
         angle: (i / BODIES.length) * Math.PI * 2,
         orbit: body.orbit,
         speed: body.speed,
@@ -599,10 +602,8 @@ export function CinematicIntro({ onComplete }: Props) {
         p.mesh.position.set(Math.cos(a) * p.orbit, 0, Math.sin(a) * p.orbit)
         p.mesh.rotation.z = p.tilt
         p.mesh.rotateOnAxis(axisY, p.spin * 0.02)
-        labelOffset.copy(p.mesh.position).multiplyScalar(1.06)
-        labelOffset.y += p.mesh.geometry.boundingSphere
-          ? p.mesh.geometry.boundingSphere.radius * 1.9
-          : 2
+        labelOffset.copy(p.mesh.position)
+        labelOffset.y += p.radius * 1.35
         p.label.position.copy(labelOffset)
       })
 
@@ -713,6 +714,25 @@ export function CinematicIntro({ onComplete }: Props) {
       worldCamera.updateProjectionMatrix()
     }
 
+    const revealPhrase = () => {
+      const root = phraseRef.current
+      const rule = phraseRuleRef.current
+      const kicker = phraseKickerRef.current
+      if (!root) return
+
+      const words = Array.from(root.querySelectorAll('.phrase-inner')) as HTMLElement[]
+
+      gsap.set(root, { opacity: 1 })
+      gsap.set(words, { yPercent: 130, opacity: 0 })
+      gsap.set(rule, { scaleX: 0 })
+      gsap.set(kicker, { opacity: 0, letterSpacing: '0.18em' })
+
+      gsap.timeline()
+        .to(words, { yPercent: 0, opacity: 1, duration: 0.95, ease: 'expo.out', stagger: 0.075 })
+        .to(rule, { scaleX: 1, duration: 1.1, ease: 'power3.inOut' }, '-=0.45')
+        .to(kicker, { opacity: 1, letterSpacing: '0.5em', duration: 1.2, ease: 'power2.out' }, '-=0.85')
+    }
+
     const tl = gsap.timeline({
       onComplete: () => {
         revealLogo()
@@ -732,8 +752,8 @@ export function CinematicIntro({ onComplete }: Props) {
       .add(swapToWorld)
       .to(flashRef.current, { opacity: 0, duration: 0.8, ease: 'power2.out' })
       .to(state, { world: 1, duration: T_WORLD, ease: 'power2.out' }, '-=0.35')
-      .to(phraseRef.current, { opacity: 1, duration: 1.1, ease: 'power2.out' }, '-=2.2')
-      .to(phraseRef.current, { opacity: 0, duration: 0.5, ease: 'power2.in' }, '+=1.4')
+      .add(revealPhrase)
+      .to(phraseRef.current, { opacity: 0, duration: 0.5, ease: 'power2.in' }, '+=2.4')
       .to(blackRef.current, { opacity: 0.78, duration: 0.75, ease: 'power2.inOut' })
       .to(barsRef.current, { opacity: 0, duration: 0.9, ease: 'power2.inOut' }, '-=0.4')
 
@@ -831,10 +851,37 @@ export function CinematicIntro({ onComplete }: Props) {
 
       <div ref={flashRef} className="pointer-events-none absolute inset-0 z-[7] bg-white opacity-0" />
 
-      <div ref={phraseRef} className="pointer-events-none absolute inset-0 z-[8] flex items-center justify-center opacity-0">
-        <p className="px-8 text-center text-xl font-semibold uppercase leading-relaxed tracking-[0.22em] text-white md:text-4xl md:tracking-[0.3em]">
-          {TAGLINE}
-        </p>
+      <div ref={phraseRef} className="pointer-events-none absolute inset-0 z-[8] flex flex-col items-center justify-center opacity-0">
+        <div className="flex w-full max-w-5xl flex-col items-center px-6">
+          <p
+            ref={phraseKickerRef}
+            className="mb-6 text-[9px] uppercase tracking-[0.5em] text-white/45 md:text-[11px]"
+          >
+            Evolved Tech
+          </p>
+
+          <div className="flex flex-wrap items-baseline justify-center gap-x-[0.32em] gap-y-1">
+            {TAGLINE.split(' ').map((word, i) => (
+              <span key={`${word}-${i}`} className="inline-block overflow-hidden py-[0.06em]">
+                <span
+                  className="phrase-inner inline-block text-3xl font-extrabold uppercase leading-[0.95] tracking-[0.06em] text-transparent md:text-7xl"
+                  style={{
+                    backgroundImage: 'linear-gradient(96deg, #ffffff 0%, #cfe9ff 38%, #6cc6ff 70%, #00A3FF 100%)',
+                    WebkitBackgroundClip: 'text',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  {word}
+                </span>
+              </span>
+            ))}
+          </div>
+
+          <div
+            ref={phraseRuleRef}
+            className="mt-8 h-px w-48 bg-gradient-to-r from-transparent via-[#00A3FF] to-transparent md:w-80"
+          />
+        </div>
       </div>
 
       <div ref={blackRef} className="pointer-events-none absolute inset-0 z-[8] bg-black opacity-0" />
@@ -875,7 +922,7 @@ export function CinematicIntro({ onComplete }: Props) {
           EVOLVED TECH
         </h1>
         <p ref={logoSubRef} className="mt-4 text-[10px] tracking-[0.45em] text-[#00A3FF] opacity-0 md:text-sm">
-          HOME OF LIMN ENGINE
+          DRAW YOUR GAME INTO EXISTENCE
         </p>
       </div>
 
