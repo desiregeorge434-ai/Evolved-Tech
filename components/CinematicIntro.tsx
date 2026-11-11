@@ -678,9 +678,19 @@ export function CinematicIntro({ onComplete }: Props) {
       return { x, y, roll }
     }
 
+    let orbitPhase = 0
+    let prevT = 0
+
     const renderSpace = (t: number, cam: THREE.PerspectiveCamera) => {
+      const dt = Math.min(0.05, Math.max(0.001, t - prevT))
+      prevT = t
+      const timeScale = state.phase === 'space'
+        ? 1
+        : THREE.MathUtils.lerp(1, 0.06, state.approach)
+      orbitPhase += dt * timeScale
+
       planets.forEach((p) => {
-        const a = p.angle + t * p.speed
+        const a = p.angle + orbitPhase * p.speed
         p.mesh.position.set(Math.cos(a) * p.orbit, 0, Math.sin(a) * p.orbit)
         p.mesh.rotation.z = p.tilt
         p.mesh.rotateOnAxis(axisY, p.spin * 0.02)
@@ -709,8 +719,6 @@ export function CinematicIntro({ onComplete }: Props) {
         }
       })
 
-      let amp = 0.4
-
       if (state.phase === 'space') {
         const u = THREE.MathUtils.clamp(state.u, 0, 1)
         cam.position.copy(path.getPointAt(u))
@@ -735,16 +743,18 @@ export function CinematicIntro({ onComplete }: Props) {
           cam.updateProjectionMatrix()
         }
         if (earthAtmosphere) earthAtmosphere.uniforms.uIntensity.value = 1 + eased * 5
-        amp = 0.18
       }
 
-      smoothTarget.lerp(desiredTarget, 0.09)
+      smoothTarget.lerp(desiredTarget, 1 - Math.exp(-4.5 * dt))
+
+      const dist = cam.position.distanceTo(smoothTarget)
+      const worldAmp = Math.min(0.45, Math.max(0.015, dist * 0.012))
 
       const s = shake(t)
-      cam.position.x += s.x * amp
-      cam.position.y += s.y * amp
+      cam.position.x += s.x * worldAmp
+      cam.position.y += s.y * worldAmp
       cam.lookAt(smoothTarget)
-      cam.rotateZ(s.roll * amp * 0.012)
+      cam.rotateZ(s.roll * worldAmp * 0.01)
     }
 
     const renderLagos = (t: number) => {
