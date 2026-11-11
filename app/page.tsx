@@ -2,123 +2,58 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, ArrowUpRight, Gamepad2, PenTool, Boxes, Circle } from 'lucide-react'
+import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import { CinematicIntro } from '@/components/CinematicIntro'
-import { SpaceBackground } from '@/components/SpaceBackground'
+import { AnimatedLogo } from '@/components/AnimatedLogo'
 
 const STAGES = [
   {
     era: '2025',
-    tag: 'Shipped',
     title: 'Limn Engine',
-    body: 'One file. No npm, no build step. Born on a Toshiba with 4GB of RAM and offline W3Schools. A dual-renderer took it from 4 FPS to 60.',
-    status: 'done' as const,
+    line: 'One file, zero dependencies. A 2D engine built on a Toshiba with 4GB of RAM.',
+    state: 'Shipped',
   },
   {
     era: '2026',
-    tag: 'Shipped',
     title: 'Limn Studio',
-    body: 'The editor where you build, the arcade where you publish. Profiles, leaderboards, comments — a place for games to live.',
-    status: 'done' as const,
+    line: 'The editor to build in, the arcade to publish to. Games with somewhere to live.',
+    state: 'Shipped',
   },
   {
     era: 'Next',
-    tag: 'In development',
     title: 'Limn 3D',
-    body: 'The same philosophy, one dimension up. Common outcomes as functions. The hard parts made invisible.',
-    status: 'next' as const,
+    line: 'The same philosophy, one dimension up. In development, with no date attached.',
+    state: 'Building',
   },
 ]
 
-const PRODUCTS = [
-  {
-    icon: Gamepad2,
-    title: 'Play the arcade',
-    body: 'Games built by the community, running in your browser.',
-    href: 'https://limn-engine-doc.vercel.app/arcade',
-  },
-  {
-    icon: PenTool,
-    title: 'Open the editor',
-    body: 'Write a game, publish it, share the link. In one tab.',
-    href: 'https://limn-engine-doc.vercel.app/editor',
-  },
-  {
-    icon: Boxes,
-    title: 'Read the docs',
-    body: 'Beginner guides through to engine internals.',
-    href: 'https://limn-engine-doc.vercel.app',
-  },
-]
-
-const STATS = [
-  { value: '1', label: 'file to ship' },
-  { value: '0', label: 'dependencies' },
-  { value: '60', label: 'FPS target' },
-  { value: 'MIT', label: 'licensed' },
+const LINKS = [
+  { label: 'Arcade', href: 'https://limn-engine-doc.vercel.app/arcade' },
+  { label: 'Editor', href: 'https://limn-engine-doc.vercel.app/editor' },
+  { label: 'Documentation', href: 'https://limn-engine-doc.vercel.app' },
 ]
 
 const CSS = `
-@keyframes floatY { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
-@keyframes spinSlow { to { transform: rotate(360deg) } }
-@keyframes glowPulse { 0%,100% { opacity:.35; transform:scale(1) } 50% { opacity:.75; transform:scale(1.1) } }
-@keyframes driftA { 0% { transform: translate3d(0,0,0) scale(1) } 50% { transform: translate3d(5%,-4%,0) scale(1.12) } 100% { transform: translate3d(0,0,0) scale(1) } }
-@keyframes driftB { 0% { transform: translate3d(0,0,0) scale(1.05) } 50% { transform: translate3d(-4%,3%,0) scale(.95) } 100% { transform: translate3d(0,0,0) scale(1.05) } }
-@keyframes riseIn { from { opacity:0; transform: translateY(20px) } to { opacity:1; transform: translateY(0) } }
-
-.anim-float { animation: floatY 6s ease-in-out infinite; }
-.anim-spin { animation: spinSlow 26s linear infinite; }
-.anim-glow { animation: glowPulse 5.5s ease-in-out infinite; }
-.rise { opacity: 0; animation: riseIn .9s cubic-bezier(.22,1,.36,1) forwards; }
-
-.hero-aurora {
-  position: absolute; inset: -25%;
-  background:
-    radial-gradient(36% 40% at 20% 26%, rgba(0,163,255,.30), transparent 62%),
-    radial-gradient(32% 36% at 80% 20%, rgba(124,92,255,.24), transparent 64%),
-    radial-gradient(46% 46% at 54% 84%, rgba(0,163,255,.18), transparent 66%);
-  filter: blur(34px);
-  animation: driftA 20s ease-in-out infinite;
-}
-.hero-aurora-2 {
-  position: absolute; inset: -25%;
-  background: radial-gradient(30% 34% at 68% 62%, rgba(255,92,200,.16), transparent 66%);
-  filter: blur(40px);
-  animation: driftB 26s ease-in-out infinite;
-}
-.hero-grid {
-  position: absolute; inset: 0;
-  background-image:
-    linear-gradient(to right, rgba(255,255,255,.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,.05) 1px, transparent 1px);
-  background-size: 64px 64px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 42%, #000 35%, transparent 78%);
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 42%, #000 35%, transparent 78%);
-}
+@keyframes riseIn { from { opacity:0; transform: translateY(18px) } to { opacity:1; transform: translateY(0) } }
+@keyframes breathe { 0%,100% { opacity:.28 } 50% { opacity:.5 } }
+.rise { opacity: 0; animation: riseIn .85s cubic-bezier(.22,1,.36,1) forwards; }
+.breathe { animation: breathe 9s ease-in-out infinite; }
 `
 
 export default function Home() {
   const [showIntro, setShowIntro] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const [bgReady, setBgReady] = useState(false)
-  const [quality, setQuality] = useState<'full' | 'low'>('full')
 
   useEffect(() => {
     setMounted(true)
-    const lowPower = window.innerWidth < 820 || (navigator as Navigator & { deviceMemory?: number }).deviceMemory === 2
-    setQuality(lowPower ? 'low' : 'full')
-
     if (!sessionStorage.getItem('hasSeenIntro')) {
       setShowIntro(true)
-    } else {
-      setBgReady(true)
     }
   }, [])
 
   const handleIntroComplete = () => {
     sessionStorage.setItem('hasSeenIntro', 'true')
     setShowIntro(false)
-    setBgReady(true)
   }
 
   if (!mounted) return null
@@ -130,42 +65,37 @@ export default function Home() {
       <div className="relative overflow-hidden bg-[#05060a]">
         <style>{CSS}</style>
 
-        <section className="relative min-h-screen">
-          <div className="hero-aurora" />
-          <div className="hero-aurora-2" />
-          {bgReady && <SpaceBackground quality={quality} />}
-          <div className="absolute inset-0 bg-[#05060a]/58" />
-          <div className="hero-grid" />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-[820px]"
+          style={{
+            background:
+              'radial-gradient(46% 42% at 50% 0%, rgba(0,163,255,0.16), transparent 70%), radial-gradient(30% 30% at 82% 18%, rgba(124,92,255,0.10), transparent 72%)',
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="breathe pointer-events-none absolute left-1/2 top-[-180px] h-[560px] w-[560px] -translate-x-1/2 rounded-full blur-[120px]"
+          style={{ background: 'radial-gradient(circle, rgba(0,163,255,0.22), transparent 65%)' }}
+        />
 
-          <div className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-6 py-24 lg:px-10">
-            <div className="relative mb-9 rise">
-              <div className="relative inline-flex h-24 w-24 items-center justify-center md:h-28 md:w-28">
-                <span className="anim-glow absolute inset-0 rounded-full bg-[#00A3FF]/25 blur-2xl" />
-                <span className="anim-spin absolute inset-[-12px] rounded-full border border-dashed border-[#00A3FF]/25" />
-                <img
-                  src="/logo.png"
-                  alt="Evolved Tech"
-                  className="anim-float relative h-20 w-20 object-contain drop-shadow-[0_0_24px_rgba(0,163,255,0.55)] md:h-24 md:w-24"
-                />
-              </div>
-            </div>
+        <section className="relative">
+          <div className="mx-auto flex min-h-[92vh] max-w-5xl flex-col items-center justify-center px-6 py-28 text-center lg:px-8">
+            <AnimatedLogo />
 
             <div
-              className="rise mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 backdrop-blur-md"
-              style={{ animationDelay: '90ms' }}
+              className="rise mt-12 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.03] px-4 py-1.5"
+              style={{ animationDelay: '520ms' }}
             >
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00A3FF] opacity-70" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#00A3FF]" />
-              </span>
-              <span className="text-[11px] uppercase tracking-[0.22em] text-white/70">
-                Now building in three dimensions
+              <span className="h-1.5 w-1.5 rounded-full bg-[#00A3FF]" />
+              <span className="text-[10px] uppercase tracking-[0.26em] text-white/60">
+                Building in three dimensions
               </span>
             </div>
 
             <h1
-              className="rise max-w-3xl text-5xl font-extrabold leading-[0.94] tracking-tight md:text-7xl"
-              style={{ animationDelay: '160ms' }}
+              className="rise mt-8 max-w-4xl text-4xl font-extrabold leading-[1.02] tracking-tight sm:text-5xl md:text-7xl"
+              style={{ animationDelay: '600ms' }}
             >
               We drew a 2D engine.
               <br />
@@ -175,150 +105,109 @@ export default function Home() {
             </h1>
 
             <p
-              className="rise mt-7 max-w-xl text-base leading-relaxed text-white/55 md:text-lg"
-              style={{ animationDelay: '240ms' }}
+              className="rise mt-8 max-w-xl text-sm leading-relaxed text-white/50 md:text-base"
+              style={{ animationDelay: '680ms' }}
             >
-              Evolved Tech builds engines that evolve. Limn Engine was our first — one file, zero
-              dependencies, shipped from a Toshiba with 4GB of RAM. It is not where we stop.
+              Evolved Tech builds engines that evolve. Limn Engine was our first. It is not where
+              we stop.
             </p>
 
             <div
-              className="rise mt-10 flex flex-col gap-3 sm:flex-row"
-              style={{ animationDelay: '320ms' }}
+              className="rise mt-11 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row"
+              style={{ animationDelay: '760ms' }}
             >
               <a
                 href="https://limn-engine-doc.vercel.app/arcade"
                 target="_blank"
                 rel="noreferrer"
-                className="group inline-flex items-center justify-center gap-2 rounded-xl bg-[#00A3FF] px-7 py-3.5 text-sm font-semibold text-white shadow-[0_0_30px_rgba(0,163,255,0.35)] transition-all hover:bg-[#0089d6] hover:shadow-[0_0_44px_rgba(0,163,255,0.5)]"
+                className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-black transition-colors hover:bg-white/90 sm:w-auto"
               >
                 Play what people built
-                <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+                <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
               </a>
               <Link
                 href="/roadmap"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/14 bg-white/[0.04] px-7 py-3.5 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/10"
+                className="inline-flex w-full items-center justify-center rounded-full border border-white/14 px-8 py-3.5 text-sm font-semibold text-white/80 transition-colors hover:bg-white/5 hover:text-white sm:w-auto"
               >
                 See the roadmap
               </Link>
             </div>
-
-            <div
-              className="rise mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] sm:grid-cols-4"
-              style={{ animationDelay: '400ms' }}
-            >
-              {STATS.map((s) => (
-                <div key={s.label} className="bg-[#05060a]/80 p-5 backdrop-blur-md">
-                  <p className="text-2xl font-semibold text-white">{s.value}</p>
-                  <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-white/40">{s.label}</p>
-                </div>
-              ))}
-            </div>
           </div>
         </section>
 
-        <section className="relative border-t border-white/5 bg-[#05060a] px-6 py-24 lg:px-10">
-          <div className="mx-auto max-w-6xl">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#00A3FF]">The evolution</p>
-            <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight md:text-5xl">
-              We are not done at two dimensions.
-            </h2>
-            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/50 md:text-base">
-              Limn Engine taught us the shape of the problem: make the common thing a function, make
-              the hard thing invisible. That lesson does not stop at a flat plane.
-            </p>
+        <section className="relative border-t border-white/[0.06]">
+          <div className="mx-auto max-w-5xl px-6 py-24 lg:px-8">
+            <p className="text-[10px] uppercase tracking-[0.28em] text-white/35">The evolution</p>
 
-            <div className="mt-14 grid gap-4 md:grid-cols-3">
-              {STAGES.map((s) => (
+            <div className="mt-12 divide-y divide-white/[0.06]">
+              {STAGES.map((s, i) => (
                 <div
                   key={s.title}
-                  className={`relative rounded-2xl border p-6 transition-colors ${
-                    s.status === 'next'
-                      ? 'border-[#00A3FF]/30 bg-[#00A3FF]/[0.06]'
-                      : 'border-white/8 bg-white/[0.02] hover:bg-white/[0.04]'
-                  }`}
+                  className="grid grid-cols-1 items-baseline gap-2 py-8 md:grid-cols-[100px_1fr_auto] md:gap-8"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase tracking-[0.22em] text-white/35">{s.era}</span>
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wider ${
-                        s.status === 'next'
-                          ? 'bg-[#00A3FF]/15 text-[#00A3FF]'
-                          : 'bg-emerald-400/10 text-emerald-300'
-                      }`}
-                    >
-                      {s.tag}
-                    </span>
+                  <span className="text-xs uppercase tracking-[0.2em] text-white/30">{s.era}</span>
+                  <div>
+                    <h2 className={`text-2xl font-semibold tracking-tight ${i === 2 ? 'text-white' : 'text-white/85'}`}>
+                      {s.title}
+                    </h2>
+                    <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/45">{s.line}</p>
                   </div>
-                  <h3 className="mt-5 text-lg font-semibold">{s.title}</h3>
-                  <p className="mt-2 text-xs leading-relaxed text-white/45">{s.body}</p>
+                  <span
+                    className={`text-[10px] uppercase tracking-[0.2em] ${
+                      s.state === 'Building' ? 'text-[#00A3FF]' : 'text-white/30'
+                    }`}
+                  >
+                    {s.state}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="relative border-t border-white/5 bg-[#03040a] px-6 py-24 lg:px-10">
-          <div className="mx-auto max-w-6xl">
-            <div className="flex flex-wrap items-end justify-between gap-6">
-              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Limn Engine, today</h2>
-              <a
-                href="https://limn-engine-doc.vercel.app"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm text-[#00A3FF] hover:underline"
-              >
-                limn-engine-doc.vercel.app
-                <ArrowUpRight size={14} />
-              </a>
+        <section className="relative border-t border-white/[0.06]">
+          <div className="mx-auto grid max-w-5xl gap-10 px-6 py-24 md:grid-cols-[1.1fr_0.9fr] lg:px-8">
+            <div>
+              <h2 className="max-w-md text-3xl font-bold leading-tight tracking-tight md:text-4xl">
+                Not done at two dimensions.
+              </h2>
+              <p className="mt-5 max-w-md text-sm leading-relaxed text-white/45">
+                Limn taught us the shape of the problem: make the common thing a function, make the
+                hard thing invisible. That lesson does not stop at a flat plane.
+              </p>
             </div>
 
-            <div className="mt-10 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] md:grid-cols-3">
-              {PRODUCTS.map((p) => {
-                const Icon = p.icon
-                return (
-                  <a
-                    key={p.title}
-                    href={p.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group bg-[#05060a]/80 p-7 backdrop-blur-md transition-colors hover:bg-[#080b12]"
-                  >
-                    <Icon
-                      size={18}
-                      className="text-[#00A3FF] transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <h3 className="mt-4 flex items-center gap-1.5 text-sm font-semibold">
-                      {p.title}
-                      <ArrowUpRight
-                        size={13}
-                        className="text-white/25 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-                      />
-                    </h3>
-                    <p className="mt-2 text-xs leading-relaxed text-white/45">{p.body}</p>
-                  </a>
-                )
-              })}
+            <div className="flex flex-col justify-end gap-1">
+              {LINKS.map((l) => (
+                <a
+                  key={l.label}
+                  href={l.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group flex items-center justify-between border-b border-white/[0.06] py-4 text-sm text-white/60 transition-colors hover:text-white"
+                >
+                  {l.label}
+                  <ArrowUpRight
+                    size={15}
+                    className="text-white/20 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#00A3FF]"
+                  />
+                </a>
+              ))}
             </div>
           </div>
         </section>
 
-        <section className="relative border-t border-white/5 px-6 py-24 lg:px-10">
-          <div className="mx-auto flex max-w-4xl flex-col items-center text-center">
-            <Circle size={10} className="fill-[#00A3FF] text-[#00A3FF]" />
-            <h2 className="mt-6 text-3xl font-bold tracking-tight md:text-5xl">
+        <section className="relative border-t border-white/[0.06]">
+          <div className="mx-auto flex max-w-3xl flex-col items-center px-6 py-24 text-center lg:px-8">
+            <h2 className="text-2xl font-semibold leading-snug tracking-tight md:text-4xl">
               The third dimension is already in the render queue.
             </h2>
-            <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/50 md:text-base">
-              We are building Limn 3D on the same principle: the things you write in every project
-              become functions, and the hard parts disappear.
-            </p>
             <Link
               href="/roadmap"
-              className="mt-9 inline-flex items-center gap-2 rounded-xl bg-white px-7 py-3.5 text-sm font-semibold text-black transition-colors hover:bg-white/90"
+              className="group mt-8 inline-flex items-center gap-2 text-sm font-medium text-[#00A3FF]"
             >
               Follow the build
-              <ArrowRight size={16} />
+              <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
         </section>

@@ -184,6 +184,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <main className="lg:pl-[264px]">
         <div className="pt-14 lg:pt-0">{children}</div>
+
+        <footer className="border-t border-white/[0.06] px-6 py-10 lg:px-10">
+          <div className="mx-auto flex max-w-6xl flex-col gap-6 text-xs text-white/35 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="" className="h-6 w-6 object-contain opacity-70" />
+              <span>© 2026 Evolved Tech · Lagos, Nigeria</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-6">
+              <a
+                href="https://limn-engine-doc.vercel.app"
+                target="_blank"
+                rel="noreferrer"
+                className="transition-colors hover:text-white"
+              >
+                Limn Engine
+              </a>
+              <Link href="/roadmap" className="transition-colors hover:text-white">
+                Roadmap
+              </Link>
+              <a href="mailto:evolvedtech004@gmail.com" className="transition-colors hover:text-white">
+                Contact
+              </a>
+            </div>
+          </div>
+        </footer>
       </main>
     </div>
   )
