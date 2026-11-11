@@ -13,6 +13,7 @@ import {
   X,
   ArrowUpRight,
   Gamepad2,
+  Milestone,
   type LucideIcon,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -25,6 +26,7 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { href: '/', label: 'Home', icon: Home },
+  { href: '/roadmap', label: 'Roadmap', icon: Milestone },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ]
@@ -94,7 +96,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="my-4 h-px bg-white/5" />
 
       <Link
-        href="https://github.com/desiregeorge434-ai/Evolved-Tech"
+        href="https://limn-engine-doc.vercel.app"
         target="_blank"
         rel="noreferrer"
         className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/55 transition-colors hover:bg-white/5 hover:text-white"
