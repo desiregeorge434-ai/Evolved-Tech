@@ -6,7 +6,6 @@ import gsap from 'gsap'
 
 export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
   const mountRef = useRef<HTMLDivElement>(null)
-  const logoRef = useRef<HTMLImageElement>(null)
 
   useEffect(() => {
     const currentMount = mountRef.current
@@ -22,11 +21,86 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
 
     const textureLoader = new THREE.TextureLoader()
 
-    const sunGeo = new THREE.SphereGeometry(3, 32, 32)
-    const sunMat = new THREE.MeshBasicMaterial({ color: 0xffcc00 })
+    const sunGeo = new THREE.SphereGeometry(4, 128, 128)
+    const sunMat = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0 },
+        colorHot: { value: new THREE.Color(0xffffee) },
+        colorMid: { value: new THREE.Color(0xffaa00) },
+        colorCool: { value: new THREE.Color(0xff3300) }
+      },
+      vertexShader: `
+        varying vec3 vPosition;
+        varying vec3 vNormal;
+        void main() {
+          vPosition = position;
+          vNormal = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float time;
+        uniform vec3 colorHot;
+        uniform vec3 colorMid;
+        uniform vec3 colorCool;
+        varying vec3 vPosition;
+        varying vec3 vNormal;
+
+        float hash(vec3 p) {
+          p = fract(p * 0.3183099 + .1);
+          p *= 17.0;
+          return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+        }
+        float noise(vec3 x) {
+          vec3 i = floor(x);
+          vec3 f = fract(x);
+          f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(mix(hash(i + vec3(0,0,0)), hash(i + vec3(1,0,0)), f.x),
+                         mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
+                     mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x),
+                         mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z);
+        }
+
+        void main() {
+          vec3 p = vPosition * 0.5;
+          float n = noise(p + vec3(0.0, time * 0.2, 0.0));
+          n += noise(p * 2.0 + vec3(time * 0.3)) * 0.5;
+          n += noise(p * 4.0 + vec3(time * 0.5)) * 0.25;
+
+          vec3 finalColor = mix(colorCool, colorMid, n);
+          finalColor = mix(finalColor, colorHot, pow(n, 2.0));
+
+          float rim = 1.0 - dot(vNormal, vec3(0.0, 0.0, 1.0));
+          finalColor += colorMid * pow(rim, 4.0);
+
+          gl_FragColor = vec4(finalColor, 1.0);
+        }
+      `
+    })
     const sun = new THREE.Mesh(sunGeo, sunMat)
     scene.add(sun)
-    const sunLight = new THREE.PointLight(0xffffff, 2, 1000)
+
+    const coronaGeo1 = new THREE.SphereGeometry(5.0, 64, 64)
+    const coronaMat1 = new THREE.MeshBasicMaterial({ 
+      color: 0xff4400, 
+      transparent: true, 
+      opacity: 0.15, 
+      side: THREE.BackSide 
+    })
+    const corona1 = new THREE.Mesh(coronaGeo1, coronaMat1)
+    scene.add(corona1)
+
+    const coronaGeo2 = new THREE.SphereGeometry(6.5, 64, 64)
+    const coronaMat2 = new THREE.MeshBasicMaterial({ 
+      color: 0xff2200, 
+      transparent: true, 
+      opacity: 0.05, 
+      side: THREE.BackSide 
+    })
+    const corona2 = new THREE.Mesh(coronaGeo2, coronaMat2)
+    scene.add(corona2)
+
+    const sunLight = new THREE.PointLight(0xffeedd, 3, 2000)
     scene.add(sunLight)
 
     const milkyWayTexture = textureLoader.load('/milky-way.jpg')
@@ -37,7 +111,7 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
     sky.rotation.x = Math.PI / 4
     scene.add(sky)
 
-    const earthGeo = new THREE.SphereGeometry(1.2, 64, 64)
+    const earthGeo = new THREE.SphereGeometry(1.5, 64, 64)
     const dayTexture = textureLoader.load('/earth-day.png')
     const nightTexture = textureLoader.load('/earth-night.png')
     
@@ -71,7 +145,7 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
           vec4 dayColor = texture2D(dayTexture, vUv);
           vec4 nightColor = texture2D(nightTexture, vUv);
           float blend = smoothstep(-0.2, 0.2, intensity);
-          nightColor.rgb *= 1.5;
+          nightColor.rgb *= 2.0;
           gl_FragColor = mix(nightColor, dayColor, blend);
         }
       `
@@ -80,11 +154,11 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
     const earth = new THREE.Mesh(earthGeo, earthMat)
     const earthOrbit = new THREE.Group()
     earthOrbit.add(earth)
-    earth.position.x = 10
+    earth.position.x = 14
     scene.add(earthOrbit)
 
-    const atmosGeo = new THREE.SphereGeometry(1.25, 64, 64)
-    const atmosMat = new THREE.MeshBasicMaterial({ color: 0x00A3FF, transparent: true, opacity: 0.15, side: THREE.BackSide })
+    const atmosGeo = new THREE.SphereGeometry(1.55, 64, 64)
+    const atmosMat = new THREE.MeshBasicMaterial({ color: 0x00A3FF, transparent: true, opacity: 0.25, side: THREE.BackSide })
     earth.add(new THREE.Mesh(atmosGeo, atmosMat))
 
     const createStandardPlanet = (texturePath: string, size: number, distance: number) => {
@@ -98,11 +172,11 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
       return { planet, orbit }
     }
 
-    const marsData = createStandardPlanet('/mars.png', 0.8, 16)
-    const mercuryData = createStandardPlanet('/mercury.png', 0.5, 6)
-    const jupiterData = createStandardPlanet('/jupiter.png', 2.5, 25)
+    const mercuryData = createStandardPlanet('/mercury.png', 0.5, 8)
+    const marsData = createStandardPlanet('/mars.png', 1.0, 20)
+    const jupiterData = createStandardPlanet('/jupiter.png', 2.5, 28)
 
-    camera.position.set(0, 40, 60)
+    camera.position.set(0, 20, 50)
     camera.lookAt(0, 0, 0)
 
     const tl = gsap.timeline({
@@ -111,15 +185,15 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
       }
     })
 
-    tl.to(camera.position, { x: 10, y: 10, z: 25, duration: 4, ease: "power2.inOut" })
-      .to(camera.rotation, { x: -0.3, y: 0.4, z: 0, duration: 4, ease: "power2.inOut" }, "-=4")
-      .to(camera.position, { x: 10, y: 2, z: 14, duration: 2, ease: "power2.inOut" })
-      .to(camera.rotation, { x: 0, y: 0.7, z: 0, duration: 2, ease: "power2.inOut" }, "-=2")
-      .to(earth.rotation, { y: -0.2, duration: 2, ease: "power2.inOut" }, "-=2")
-      .to(camera.position, { x: 10, y: 0.5, z: 8.8, duration: 2.5, ease: "power4.in" })
-      .to(camera.rotation, { x: 0.1, y: 0.7, z: 0, duration: 2.5, ease: "power4.in" }, "-=2.5")
-      .to("#lagos-text", { opacity: 1, duration: 0.5, ease: "power2.inOut" }, "-=1")
-      .to("#logo-reveal", { opacity: 1, scale: 1, rotationY: 360, duration: 1.5, ease: "back.out(1.7)" }, "-=0.5")
+    tl.to(camera.position, { x: 14, y: 6, z: 22, duration: 5, ease: "power1.inOut" })
+    .to(camera.rotation, { x: -0.1, y: 0.6, z: 0, duration: 5, ease: "power1.inOut" }, "-=5")
+    .to(camera.position, { x: 14, y: 1.5, z: 13.5, duration: 3, ease: "power2.inOut" })
+    .to(camera.rotation, { x: 0, y: 0.8, z: 0, duration: 3, ease: "power2.inOut" }, "-=3")
+    .to(earth.rotation, { y: -0.4, duration: 3, ease: "power2.inOut" }, "-=3")
+    .to(camera.position, { x: 14, y: 1.5, z: 12.7, duration: 3, ease: "power4.in" })
+    .to(camera.rotation, { x: 0.1, y: 0.8, z: 0, duration: 3, ease: "power4.in" }, "-=3")
+    .to("#lagos-text", { opacity: 1, duration: 0.2 }, "-=0.5")
+    .to("#logo-reveal", { opacity: 1, scale: 1, rotationY: 360, duration: 1.5, ease: "back.out(1.5)" }, "+=0.5")
 
     const clock = new THREE.Clock()
 
@@ -127,15 +201,20 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
       requestAnimationFrame(animate)
       const time = clock.getElapsedTime()
 
-      if (time < 6) {
-        earth.rotation.y = time * 0.2
-        marsData.planet.rotation.y = time * 0.15
-        mercuryData.planet.rotation.y = time * 0.3
-        jupiterData.planet.rotation.y = time * 0.1
-        earthOrbit.rotation.y = time * 0.05
-        marsData.orbit.rotation.y = time * 0.03
-        mercuryData.orbit.rotation.y = time * 0.01
-        jupiterData.orbit.rotation.y = time * 0.02
+      sunMat.uniforms.time.value = time;
+      corona1.scale.setScalar(1 + Math.sin(time * 1.5) * 0.02)
+      corona2.scale.setScalar(1 + Math.sin(time * 1.0) * 0.03)
+
+      if (time < 8) {
+        earth.rotation.y = time * 0.1
+        mercuryData.planet.rotation.y = time * 0.1
+        marsData.planet.rotation.y = time * 0.1
+        jupiterData.planet.rotation.y = time * 0.2
+        
+        mercuryData.orbit.rotation.y = time * 0.04
+        earthOrbit.rotation.y = time * 0.02
+        marsData.orbit.rotation.y = time * 0.015
+        jupiterData.orbit.rotation.y = time * 0.005
       }
 
       const worldPos = new THREE.Vector3()
@@ -164,7 +243,6 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
       </div>
 
       <img 
-        ref={logoRef}
         id="logo-reveal"
         src="/logo.png" 
         alt="Evolved Tech" 
