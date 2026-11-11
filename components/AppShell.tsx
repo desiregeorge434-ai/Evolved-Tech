@@ -13,13 +13,14 @@ import {
   X,
   ArrowUpRight,
   Gamepad2,
+  type LucideIcon,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 type NavItem = {
   href: string
   label: string
-  icon: React.ComponentType<{ size?: number; className?: string }>
+  icon: LucideIcon
 }
 
 const NAV: NavItem[] = [
