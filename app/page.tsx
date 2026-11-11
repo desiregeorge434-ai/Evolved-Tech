@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Sparkles, Layers, Cpu } from 'lucide-react'
 import { CinematicIntro } from '@/components/CinematicIntro'
+import { SpaceBackground } from '@/components/SpaceBackground'
 
 const FEATURES = [
   {
@@ -69,17 +70,25 @@ const CSS = `
 export default function Home() {
   const [showIntro, setShowIntro] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [bgReady, setBgReady] = useState(false)
+  const [quality, setQuality] = useState<'full' | 'low'>('full')
 
   useEffect(() => {
     setMounted(true)
+    const lowPower = window.innerWidth < 820 || (navigator as Navigator & { deviceMemory?: number }).deviceMemory === 2
+    setQuality(lowPower ? 'low' : 'full')
+
     if (!sessionStorage.getItem('hasSeenIntro')) {
       setShowIntro(true)
+    } else {
+      setBgReady(true)
     }
   }, [])
 
   const handleIntroComplete = () => {
     sessionStorage.setItem('hasSeenIntro', 'true')
     setShowIntro(false)
+    setBgReady(true)
   }
 
   if (!mounted) return null
@@ -93,6 +102,8 @@ export default function Home() {
 
         <div className="hero-aurora" />
         <div className="hero-aurora-2" />
+        {bgReady && <SpaceBackground quality={quality} />}
+        <div className="absolute inset-0 bg-[#05060a]/58" />
         <div className="hero-grid" />
 
         <div className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-6 py-24 lg:px-10">
