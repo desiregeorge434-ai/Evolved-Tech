@@ -11,7 +11,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 type Props = { onComplete: () => void }
 
 const BLUE = 0x00a3ff
-const TAGLINE = 'THE POWER OF MAKING GAMES'
+const TAGLINE = 'DRAWING YOUR GAMES INTO EXISTENCE'
 
 const CONSTELLATIONS = [
   'ORION', 'LYRA', 'CYGNUS', 'DRACO', 'PERSEUS', 'CEPHEUS',
@@ -171,6 +171,12 @@ export function CinematicIntro({ onComplete }: Props) {
   const skipRef = useRef<HTMLButtonElement>(null)
   const barsRef = useRef<HTMLDivElement>(null)
   const phraseRef = useRef<HTMLDivElement>(null)
+  const logoMainRef = useRef<HTMLImageElement>(null)
+  const logoRedRef = useRef<HTMLImageElement>(null)
+  const logoCyanRef = useRef<HTMLImageElement>(null)
+  const logoTitleRef = useRef<HTMLHeadingElement>(null)
+  const logoSubRef = useRef<HTMLParagraphElement>(null)
+  const logoLineRef = useRef<HTMLDivElement>(null)
 
   const doneRef = useRef(onComplete)
   doneRef.current = onComplete
@@ -342,37 +348,6 @@ export function CinematicIntro({ onComplete }: Props) {
     const sunCore = new THREE.Mesh(track(new THREE.SphereGeometry(20, 96, 96)), sunMat)
     sunGroup.add(sunCore)
 
-    const coronaMat = new THREE.ShaderMaterial({
-      uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(0xffe7c2) } },
-      vertexShader: `
-        varying vec3 vNormal;
-        varying vec3 vView;
-        void main() {
-          vNormal = normalize(normalMatrix * normal);
-          vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          vView = -mv.xyz;
-          gl_Position = projectionMatrix * mv;
-        }
-      `,
-      fragmentShader: `
-        uniform float uTime;
-        uniform vec3 uColor;
-        varying vec3 vNormal;
-        varying vec3 vView;
-        void main() {
-          float f = pow(1.0 - abs(dot(normalize(vView), normalize(vNormal))), 2.6);
-          float flick = 0.88 + 0.12 * sin(uTime * 2.1) * sin(uTime * 0.8 + 1.1);
-          float a = f * flick * 0.55;
-          gl_FragColor = vec4(uColor * a, a);
-        }
-      `,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    })
-    track(coronaMat)
-    const corona = new THREE.Mesh(track(new THREE.SphereGeometry(25, 48, 48)), coronaMat)
-    sunGroup.add(corona)
 
     const flare = new THREE.Sprite(track(new THREE.SpriteMaterial({
       map: track(radialTexture([
@@ -392,7 +367,6 @@ export function CinematicIntro({ onComplete }: Props) {
     type Planet = { mesh: THREE.Mesh; label: THREE.Sprite; angle: number; orbit: number; speed: number; tilt: number; spin: number }
     const planets: Planet[] = []
     let earthMesh: THREE.Mesh | null = null
-    let earthHalo: THREE.SpriteMaterial | null = null
     let earthClouds: THREE.Mesh | null = null
     let earthRadius = 5.5
 
@@ -447,22 +421,6 @@ export function CinematicIntro({ onComplete }: Props) {
       if (body.name === 'EARTH') {
         earthMesh = mesh
         earthRadius = body.radius
-        const haloMat = track(new THREE.SpriteMaterial({
-          map: track(radialTexture([
-            [0, 'rgba(70,150,255,0)'],
-            [0.72, 'rgba(110,190,255,0.5)'],
-            [0.86, 'rgba(90,170,255,0.13)'],
-            [1, 'rgba(60,130,255,0)'],
-          ])),
-          transparent: true,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-          opacity: 0.6,
-        }))
-        earthHalo = haloMat
-        const halo = new THREE.Sprite(haloMat)
-        halo.scale.setScalar(body.radius * 2.7)
-        mesh.add(halo)
 
         earthClouds = new THREE.Mesh(
           track(new THREE.SphereGeometry(body.radius * 1.02, 64, 64)),
@@ -520,7 +478,7 @@ export function CinematicIntro({ onComplete }: Props) {
     const T_SPACE = 6.0
     const T_APPROACH = 3.2
     const T_WORLD = 3.2
-    const T_LOGO_HOLD = 1.5
+    const T_LOGO_HOLD = 2.2
 
     const state = { u: 0, approach: 0, world: 0, phase: 'space' as 'space' | 'approach' | 'world' }
     let approachFrom = new THREE.Vector3()
@@ -569,6 +527,14 @@ export function CinematicIntro({ onComplete }: Props) {
     gridCeiling.position.y = 280
     world.add(gridCeiling)
 
+    const gridMats: THREE.LineBasicMaterial[] = []
+    ;[gridFloor, gridCeiling].forEach((g) => {
+      const m = g.material as THREE.LineBasicMaterial
+      m.transparent = true
+      m.opacity = 0
+      gridMats.push(m)
+    })
+
     const objects: THREE.Mesh[] = []
     const shapes = [
       new THREE.BoxGeometry(1, 1, 1),
@@ -591,7 +557,8 @@ export function CinematicIntro({ onComplete }: Props) {
       }))
       const mesh = new THREE.Mesh(track(shapes[i % shapes.length]), mat)
       const s = 4 + Math.random() * 9
-      mesh.scale.setScalar(s)
+      mesh.userData.base = s
+      mesh.scale.setScalar(0.001)
       mesh.position.set(
         (Math.random() - 0.5) * 430,
         5 + Math.random() * 150,
@@ -644,8 +611,6 @@ export function CinematicIntro({ onComplete }: Props) {
       constellationGroup.rotation.y = t * 0.0025
       if (earthClouds) earthClouds.rotation.y = t * 0.012
 
-      coronaMat.uniforms.uTime.value = t
-      corona.scale.setScalar(1 + Math.sin(t * 1.3) * 0.015)
       starsFar.rotation.y = t * 0.002
 
       flybys.forEach((f) => {
@@ -681,7 +646,6 @@ export function CinematicIntro({ onComplete }: Props) {
           cam.fov = fov
           cam.updateProjectionMatrix()
         }
-        if (earthHalo) earthHalo.opacity = 0.35 + eased * 0.55
       }
 
       smoothTarget.lerp(desiredTarget, 1 - Math.exp(-3.2 * dt))
@@ -695,10 +659,14 @@ export function CinematicIntro({ onComplete }: Props) {
       worldCamera.lookAt(0, 55 - 10 * e, 0)
 
       objects.forEach((m, i) => {
+        const base = (m.userData.base as number) || 6
+        const appear = THREE.MathUtils.smoothstep(k, 0.02 + (i % 7) * 0.05, 0.5 + (i % 7) * 0.06)
+        m.scale.setScalar(Math.max(0.001, base * appear))
         m.rotation.x = t * (0.10 + (i % 5) * 0.03)
         m.rotation.y = t * (0.08 + (i % 4) * 0.03)
-        m.position.y += Math.sin(t * 0.5 + i * 1.7) * 0.02
       })
+
+      gridMats.forEach((m) => { m.opacity = 0.55 * THREE.MathUtils.smoothstep(k, 0, 0.5) })
 
       gridFloor.position.z = (t * 6) % 20
       gridCeiling.position.z = (t * 3) % 40
@@ -766,22 +734,34 @@ export function CinematicIntro({ onComplete }: Props) {
       .to(state, { world: 1, duration: T_WORLD, ease: 'power2.out' }, '-=0.35')
       .to(phraseRef.current, { opacity: 1, duration: 1.1, ease: 'power2.out' }, '-=2.2')
       .to(phraseRef.current, { opacity: 0, duration: 0.5, ease: 'power2.in' }, '+=1.4')
-      .to(blackRef.current, { opacity: 1, duration: 0.75, ease: 'power2.inOut' })
+      .to(blackRef.current, { opacity: 0.78, duration: 0.75, ease: 'power2.inOut' })
       .to(barsRef.current, { opacity: 0, duration: 0.9, ease: 'power2.inOut' }, '-=0.4')
 
     const revealLogo = () => {
       const root = logoRef.current
-      if (!root) return finish()
-      const [img, title, sub] = Array.from(root.children) as HTMLElement[]
+      const main = logoMainRef.current
+      const red = logoRedRef.current
+      const cyan = logoCyanRef.current
+      const title = logoTitleRef.current
+      const sub = logoSubRef.current
+      const line = logoLineRef.current
+      if (!root || !main || !red || !cyan || !title || !sub || !line) return finish()
 
       gsap.set(root, { opacity: 1 })
-      gsap.set([title, sub], { opacity: 0, y: 26 })
-      gsap.set(img, { opacity: 0, scale: 0.55, filter: 'blur(20px)' })
+      gsap.set(main, { opacity: 0, scale: 1.55, filter: 'blur(38px) brightness(2.4)' })
+      gsap.set([red, cyan], { opacity: 0, scale: 1.55 })
+      gsap.set([title, sub], { opacity: 0, y: 30 })
+      gsap.set(line, { xPercent: -130 })
 
       gsap.timeline({ onComplete: finish })
-        .to(img, { opacity: 1, scale: 1, filter: 'blur(0px)', duration: 1.2, ease: 'expo.out' })
-        .to(title, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.5')
-        .to(sub, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.6')
+        .to(main, { opacity: 1, scale: 1, filter: 'blur(0px) brightness(1)', duration: 1.15, ease: 'expo.out' })
+        .to([red, cyan], { opacity: 0.5, scale: 1, duration: 0.9, ease: 'expo.out' }, '<')
+        .to(red, { x: -7, y: 2, duration: 0.28, ease: 'power2.out' }, '-=0.55')
+        .to(cyan, { x: 7, y: -2, duration: 0.28, ease: 'power2.out' }, '<')
+        .to([red, cyan], { x: 0, y: 0, opacity: 0, duration: 0.55, ease: 'power2.inOut' }, '+=0.2')
+        .to(line, { xPercent: 130, duration: 0.95, ease: 'power2.inOut' }, '-=0.7')
+        .to(title, { opacity: 1, y: 0, duration: 0.7, ease: 'power4.out' }, '-=0.5')
+        .to(sub, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.45')
         .to({}, { duration: T_LOGO_HOLD })
         .to(root, { opacity: 0, duration: 0.8, ease: 'power2.inOut' })
     }
@@ -860,9 +840,41 @@ export function CinematicIntro({ onComplete }: Props) {
       <div ref={blackRef} className="pointer-events-none absolute inset-0 z-[8] bg-black opacity-0" />
 
       <div ref={logoRef} className="absolute inset-0 z-[9] flex flex-col items-center justify-center opacity-0">
-        <img src="/logo.png" alt="Evolved Tech" className="h-32 w-32 object-contain md:h-40 md:w-40" />
-        <h1 className="mt-8 text-4xl font-extrabold tracking-tight text-white md:text-6xl">EVOLVED TECH</h1>
-        <p className="mt-4 text-[10px] tracking-[0.45em] text-[#00A3FF] md:text-sm">
+        <div className="relative flex h-32 w-32 items-center justify-center md:h-44 md:w-44">
+          <img
+            ref={logoRedRef}
+            src="/logo.png"
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-contain opacity-0"
+            style={{ filter: 'drop-shadow(0 0 10px rgba(255,0,80,0.9)) saturate(2)' }}
+          />
+          <img
+            ref={logoCyanRef}
+            src="/logo.png"
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-contain opacity-0"
+            style={{ filter: 'drop-shadow(0 0 10px rgba(0,200,255,0.9)) saturate(2)' }}
+          />
+          <img
+            ref={logoMainRef}
+            src="/logo.png"
+            alt="Evolved Tech"
+            className="relative h-full w-full object-contain opacity-0"
+          />
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div
+              ref={logoLineRef}
+              className="absolute left-0 top-0 h-full w-1/3 -translate-x-full bg-gradient-to-r from-transparent via-white/70 to-transparent"
+            />
+          </div>
+        </div>
+
+        <h1 ref={logoTitleRef} className="mt-8 text-4xl font-extrabold tracking-tight text-white opacity-0 md:text-6xl">
+          EVOLVED TECH
+        </h1>
+        <p ref={logoSubRef} className="mt-4 text-[10px] tracking-[0.45em] text-[#00A3FF] opacity-0 md:text-sm">
           HOME OF LIMN ENGINE
         </p>
       </div>
