@@ -67,7 +67,7 @@ export default function Home() {
     <>
       {showIntro && <CinematicIntro onComplete={handleIntroComplete} />}
 
-      <div className="relative overflow-hidden bg-[#05060a]">
+      <div className="relative overflow-hidden">
         <style>{CSS}</style>
 
         <div

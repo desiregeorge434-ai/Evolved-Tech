@@ -148,7 +148,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <div className="min-h-screen bg-[#05060a] text-white">
+    <div className="relative min-h-screen text-white">
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0">
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/milky-way.jpg')" }}
+        />
+        <div className="absolute inset-0 bg-[#05060a]/80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#05060a]/60 via-transparent to-[#05060a]/92" />
+      </div>
       <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-white/8 bg-[#05060a]/95 px-4 backdrop-blur lg:hidden">
         <Link href="/" className="flex items-center gap-2.5">
           <img src="/logo.png" alt="" className="h-7 w-7 object-contain" />
@@ -188,7 +196,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {footer}
       </aside>
 
-      <main className="lg:pl-[264px]">
+      <main className="relative z-10 lg:pl-[264px]">
         <div className="pt-14 lg:pt-0">{children}</div>
 
         <footer className="border-t border-white/[0.06] px-6 py-10 lg:px-10">
