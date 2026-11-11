@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import { CinematicIntro } from '@/components/CinematicIntro'
 import { AnimatedLogo } from '@/components/AnimatedLogo'
+import { SpaceBackground } from '@/components/SpaceBackground'
 
 const STAGES = [
   {
@@ -43,17 +44,21 @@ const CSS = `
 export default function Home() {
   const [showIntro, setShowIntro] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [bgReady, setBgReady] = useState(false)
 
   useEffect(() => {
     setMounted(true)
     if (!sessionStorage.getItem('hasSeenIntro')) {
       setShowIntro(true)
+    } else {
+      setBgReady(true)
     }
   }, [])
 
   const handleIntroComplete = () => {
     sessionStorage.setItem('hasSeenIntro', 'true')
     setShowIntro(false)
+    setBgReady(true)
   }
 
   if (!mounted) return null
@@ -80,7 +85,10 @@ export default function Home() {
         />
 
         <section className="relative">
-          <div className="mx-auto flex min-h-[92vh] max-w-5xl flex-col items-center justify-center px-6 py-28 text-center lg:px-8">
+          {bgReady && <SpaceBackground quality="low" />}
+          <div className="pointer-events-none absolute inset-0 bg-[#05060a]/62" />
+
+          <div className="relative mx-auto flex min-h-[92vh] max-w-5xl flex-col items-center justify-center px-6 py-28 text-center lg:px-8">
             <AnimatedLogo />
 
             <div

@@ -65,7 +65,7 @@ export function SpaceBackground({ quality = 'full' }: Props) {
       return
     }
 
-    const dpr = Math.min(window.devicePixelRatio, quality === 'full' ? 1.5 : 1.2)
+    const dpr = Math.min(window.devicePixelRatio, quality === 'full' ? 1.5 : 1)
     renderer.setPixelRatio(dpr)
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.outputColorSpace = THREE.SRGBColorSpace
@@ -191,14 +191,26 @@ export function SpaceBackground({ quality = 'full' }: Props) {
     const clock = new THREE.Clock()
     let raf = 0
     let visible = true
+    let inView = true
+    let lastFrame = 0
+    const minDelta = 1 / 30
 
     const onVisibility = () => { visible = !document.hidden }
     document.addEventListener('visibilitychange', onVisibility)
 
+    const observer = new IntersectionObserver(
+      (entries) => { inView = entries[0]?.isIntersecting ?? true },
+      { threshold: 0 }
+    )
+    observer.observe(host)
+
     const tick = () => {
       raf = requestAnimationFrame(tick)
-      if (!visible) return
+      if (!visible || !inView) return
+
       const t = clock.getElapsedTime()
+      if (t - lastFrame < minDelta) return
+      lastFrame = t
 
       planets.forEach((p) => {
         const a = p.phase + t * p.speed
@@ -230,6 +242,7 @@ export function SpaceBackground({ quality = 'full' }: Props) {
 
     return () => {
       cancelAnimationFrame(raf)
+      observer.disconnect()
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('resize', onResize)
       disposables.forEach((d) => d.dispose())
