@@ -3,22 +3,22 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import gsap from 'gsap'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 
 type Props = { onComplete: () => void }
 
 const BLUE = 0x00a3ff
 
-function glowTexture(): THREE.CanvasTexture {
-  const s = 256
+function radialTexture(stops: Array<[number, string]>): THREE.CanvasTexture {
+  const s = 512
   const c = document.createElement('canvas')
   c.width = c.height = s
   const ctx = c.getContext('2d')!
   const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2)
-  g.addColorStop(0, 'rgba(255,255,255,1)')
-  g.addColorStop(0.18, 'rgba(255,244,214,0.9)')
-  g.addColorStop(0.42, 'rgba(255,168,64,0.38)')
-  g.addColorStop(0.7, 'rgba(255,110,0,0.09)')
-  g.addColorStop(1, 'rgba(255,90,0,0)')
+  stops.forEach(([o, col]) => g.addColorStop(o, col))
   ctx.fillStyle = g
   ctx.fillRect(0, 0, s, s)
   const t = new THREE.CanvasTexture(c)
@@ -26,23 +26,79 @@ function glowTexture(): THREE.CanvasTexture {
   return t
 }
 
-function windowTexture(): THREE.CanvasTexture {
-  const s = 128
+function ringTexture(): THREE.CanvasTexture {
+  const w = 512
+  const c = document.createElement('canvas')
+  c.width = w
+  c.height = 8
+  const ctx = c.getContext('2d')!
+  ctx.clearRect(0, 0, w, 8)
+  for (let x = 0; x < w; x++) {
+    const t = x / w
+    const band = Math.sin(t * 90) * 0.5 + 0.5
+    const fade = Math.sin(Math.PI * t)
+    const a = Math.max(0, (band * 0.55 + 0.15) * fade)
+    const l = 150 + band * 70
+    ctx.fillStyle = `rgba(${l + 40},${l + 20},${l - 10},${a})`
+    ctx.fillRect(x, 0, 1, 8)
+  }
+  const tex = new THREE.CanvasTexture(c)
+  tex.colorSpace = THREE.SRGBColorSpace
+  return tex
+}
+
+function streetTexture(): THREE.CanvasTexture {
+  const s = 1024
   const c = document.createElement('canvas')
   c.width = c.height = s
   const ctx = c.getContext('2d')!
-  ctx.fillStyle = '#000005'
+  ctx.fillStyle = '#050b13'
   ctx.fillRect(0, 0, s, s)
-  const cols = 8
-  const rows = 16
+  ctx.strokeStyle = 'rgba(60,150,220,0.30)'
+  ctx.lineWidth = 2
+  for (let i = 0; i <= 16; i++) {
+    const p = (i / 16) * s
+    ctx.beginPath()
+    ctx.moveTo(p, 0)
+    ctx.lineTo(p, s)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(0, p)
+    ctx.lineTo(s, p)
+    ctx.stroke()
+  }
+  for (let i = 0; i < 260; i++) {
+    const x = Math.random() * s
+    const y = Math.random() * s
+    const w = 6 + Math.random() * 22
+    const h = 6 + Math.random() * 22
+    ctx.fillStyle = `rgba(90,150,210,${0.02 + Math.random() * 0.05})`
+    ctx.fillRect(x, y, w, h)
+  }
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  t.repeat.set(6, 6)
+  return t
+}
+
+function windowTexture(): THREE.CanvasTexture {
+  const s = 256
+  const c = document.createElement('canvas')
+  c.width = c.height = s
+  const ctx = c.getContext('2d')!
+  ctx.fillStyle = '#000206'
+  ctx.fillRect(0, 0, s, s)
+  const cols = 10
+  const rows = 26
   const cw = s / cols
   const ch = s / rows
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
-      if (Math.random() < 0.42) continue
-      const warm = Math.random() < 0.25
-      ctx.fillStyle = warm ? 'rgba(255,214,150,0.95)' : 'rgba(150,220,255,0.85)'
-      ctx.fillRect(x * cw + cw * 0.22, y * ch + ch * 0.28, cw * 0.56, ch * 0.44)
+      if (Math.random() < 0.38) continue
+      const warm = Math.random() < 0.3
+      ctx.fillStyle = warm ? 'rgba(255,206,140,0.95)' : 'rgba(160,225,255,0.9)'
+      ctx.fillRect(x * cw + cw * 0.2, y * ch + ch * 0.3, cw * 0.6, ch * 0.4)
     }
   }
   const t = new THREE.CanvasTexture(c)
@@ -51,25 +107,34 @@ function windowTexture(): THREE.CanvasTexture {
   return t
 }
 
-type Body = {
-  name: string
-  radius: number
-  orbit: number
-  speed: number
-  tilt: number
-  color: number
-  texture?: string
-  ring?: boolean
+function ellipseShape(rx: number, rz: number, segments = 96, jitter = 0): THREE.Shape {
+  const shape = new THREE.Shape()
+  for (let i = 0; i <= segments; i++) {
+    const a = (i / segments) * Math.PI * 2
+    const k = 1 + (jitter ? Math.sin(a * 3.3) * jitter + Math.cos(a * 5.1) * jitter * 0.6 : 0)
+    const x = Math.cos(a) * rx * k
+    const y = Math.sin(a) * rz * k
+    if (i === 0) shape.moveTo(x, y)
+    else shape.lineTo(x, y)
+  }
+  return shape
 }
 
-const BODIES: Body[] = [
-  { name: 'Mercury', radius: 0.55, orbit: 15, speed: 0.24, tilt: 0.02, color: 0x9c8f84 },
-  { name: 'Venus', radius: 1.05, orbit: 20, speed: 0.17, tilt: 0.06, color: 0xd9b382 },
-  { name: 'Earth', radius: 1.5, orbit: 27, speed: 0.11, tilt: 0.01, color: 0x2f7fd0, texture: '/earth-day.png' },
-  { name: 'Mars', radius: 0.9, orbit: 34, speed: 0.09, tilt: 0.04, color: 0xb4552f },
-  { name: 'Jupiter', radius: 3.1, orbit: 46, speed: 0.05, tilt: 0.02, color: 0xc9a27a },
-  { name: 'Saturn', radius: 2.5, orbit: 58, speed: 0.035, tilt: 0.18, color: 0xd8c9a3, ring: true },
-  { name: 'Neptune', radius: 1.7, orbit: 70, speed: 0.02, tilt: 0.05, color: 0x3a6fd8 },
+function insideEllipse(x: number, z: number, cx: number, cz: number, rx: number, rz: number) {
+  const dx = (x - cx) / rx
+  const dz = (z - cz) / rz
+  return dx * dx + dz * dz <= 1
+}
+
+const BODIES = [
+  { name: 'Mercury', radius: 0.55, orbit: 16, speed: 0.20, tilt: 0.02, map: '/mercury.png', color: 0x9c8f84 },
+  { name: 'Venus', radius: 1.0, orbit: 22, speed: 0.15, tilt: 0.06, map: '/venus.png', color: 0xd9b382 },
+  { name: 'Earth', radius: 1.55, orbit: 30, speed: 0.10, tilt: 0.41, map: '/earth-day.png', color: 0x2f7fd0 },
+  { name: 'Mars', radius: 0.85, orbit: 38, speed: 0.08, tilt: 0.05, map: '/mars.png', color: 0xb4552f },
+  { name: 'Jupiter', radius: 3.2, orbit: 52, speed: 0.045, tilt: 0.05, map: '/jupiter.jpg', color: 0xc9a27a },
+  { name: 'Saturn', radius: 2.6, orbit: 66, speed: 0.032, tilt: 0.47, map: '/saturn.png', color: 0xd8c9a3, ring: true },
+  { name: 'Uranus', radius: 1.7, orbit: 78, speed: 0.022, tilt: 0.97, map: '/uranus.png', color: 0x9fe3e6 },
+  { name: 'Neptune', radius: 1.65, orbit: 90, speed: 0.016, tilt: 0.49, map: '/neptune.png', color: 0x3a6fd8 },
 ]
 
 export function CinematicIntro({ onComplete }: Props) {
@@ -86,8 +151,7 @@ export function CinematicIntro({ onComplete }: Props) {
     const host = hostRef.current
     if (!host) return
 
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduced) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       doneRef.current()
       return
     }
@@ -101,11 +165,14 @@ export function CinematicIntro({ onComplete }: Props) {
     }
 
     const isSmall = window.innerWidth < 820
-    const pixelRatio = Math.min(window.devicePixelRatio, isSmall ? 1.5 : 1.75)
+    const useBloom = !isSmall
+    const pixelRatio = Math.min(window.devicePixelRatio, isSmall ? 1.4 : 1.6)
 
     renderer.setPixelRatio(pixelRatio)
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.outputColorSpace = THREE.SRGBColorSpace
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.05
     host.appendChild(renderer.domElement)
 
     const disposables: Array<{ dispose: () => void }> = []
@@ -114,14 +181,32 @@ export function CinematicIntro({ onComplete }: Props) {
       return x
     }
 
-    const space = new THREE.Scene()
-    space.background = new THREE.Color(0x000206)
+    const loader = new THREE.TextureLoader()
+    const loadTex = (url: string): THREE.Texture => {
+      const tex = loader.load(url)
+      tex.colorSpace = THREE.SRGBColorSpace
+      tex.anisotropy = 3
+      if (url.includes('milky-way')) tex.mapping = THREE.EquirectangularReflectionMapping
+      return track(tex)
+    }
 
-    const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 4000)
-    camera.position.set(0, 10, 95)
+    const space = new THREE.Scene()
+
+    const composer = useBloom ? new EffectComposer(renderer) : null
+    if (composer) {
+      composer.setPixelRatio(pixelRatio)
+      composer.setSize(window.innerWidth, window.innerHeight)
+    }
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 6000)
+    camera.position.set(0, 14, 120)
+
+    space.background = loadTex('/milky-way.jpg')
+    space.backgroundIntensity = 0.55
 
     const makeStars = (count: number, rMin: number, rMax: number, size: number, opacity: number) => {
       const pos = new Float32Array(count * 3)
+      const col = new Float32Array(count * 3)
       for (let i = 0; i < count; i++) {
         const r = rMin + Math.random() * (rMax - rMin)
         const theta = Math.random() * Math.PI * 2
@@ -129,171 +214,269 @@ export function CinematicIntro({ onComplete }: Props) {
         pos[i * 3] = r * Math.sin(phi) * Math.cos(theta)
         pos[i * 3 + 1] = r * Math.cos(phi)
         pos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta)
+        const tint = 0.75 + Math.random() * 0.25
+        col[i * 3] = tint
+        col[i * 3 + 1] = tint
+        col[i * 3 + 2] = Math.min(1, tint + Math.random() * 0.15)
       }
       const geo = track(new THREE.BufferGeometry())
       geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3))
       const mat = track(new THREE.PointsMaterial({
-        color: 0xffffff, size, sizeAttenuation: true,
+        vertexColors: true, size, sizeAttenuation: true,
         transparent: true, opacity, depthWrite: false,
+        map: track(radialTexture([[0, 'rgba(255,255,255,1)'], [0.4, 'rgba(255,255,255,0.35)'], [1, 'rgba(255,255,255,0)']])),
+        alphaTest: 0.01, blending: THREE.AdditiveBlending,
       }))
       const pts = new THREE.Points(geo, mat)
       space.add(pts)
       return pts
     }
-    const starsNear = makeStars(1400, 220, 420, 1.1, 0.95)
-    const starsFar = makeStars(2200, 600, 1200, 2.2, 0.55)
+    const starsNear = makeStars(1600, 200, 460, 2.4, 0.95)
+    const starsFar = makeStars(2600, 700, 1500, 4.5, 0.5)
 
     const sunGroup = new THREE.Group()
     space.add(sunGroup)
 
-    const sunCore = new THREE.Mesh(
-      track(new THREE.SphereGeometry(3, 32, 32)),
-      track(new THREE.MeshBasicMaterial({ color: 0xfff4d6 }))
-    )
+    const sunTex = loadTex('/sun.jpg')
+    const sunMat = track(new THREE.MeshBasicMaterial({ map: sunTex, color: 0xffffff }))
+    const sunCore = new THREE.Mesh(track(new THREE.SphereGeometry(4.2, 64, 64)), sunMat)
     sunGroup.add(sunCore)
 
-    const glowTex = track(glowTexture())
-    const glow = new THREE.Sprite(track(new THREE.SpriteMaterial({
-      map: glowTex, blending: THREE.AdditiveBlending,
-      depthWrite: false, transparent: true, opacity: 0.9,
+    const coronaMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uColor: { value: new THREE.Color(0xff9a3c) },
+      },
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vView;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          vView = -mv.xyz;
+          gl_Position = projectionMatrix * mv;
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform vec3 uColor;
+        varying vec3 vNormal;
+        varying vec3 vView;
+        void main() {
+          float f = pow(1.0 - abs(dot(normalize(vView), normalize(vNormal))), 3.0);
+          float flick = 0.82 + 0.18 * sin(uTime * 1.9) * sin(uTime * 0.7 + 1.3);
+          float a = f * flick;
+          gl_FragColor = vec4(uColor * a * 2.2, a);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.FrontSide,
+    })
+    track(coronaMat)
+    const corona = new THREE.Mesh(track(new THREE.SphereGeometry(5.6, 48, 48)), coronaMat)
+    sunGroup.add(corona)
+
+    const flareTex = track(radialTexture([
+      [0, 'rgba(255,255,255,1)'],
+      [0.15, 'rgba(255,240,200,0.7)'],
+      [0.45, 'rgba(255,170,60,0.18)'],
+      [1, 'rgba(255,120,0,0)'],
+    ]))
+    const flare = new THREE.Sprite(track(new THREE.SpriteMaterial({
+      map: flareTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.55,
     })))
-    glow.scale.setScalar(46)
-    sunGroup.add(glow)
+    flare.scale.setScalar(34)
+    sunGroup.add(flare)
 
-    const sunLight = new THREE.PointLight(0xfff0d0, 3.2, 0, 0)
+    const sunLight = new THREE.PointLight(0xfff2d8, 3.4, 0, 0)
     sunGroup.add(sunLight)
-    space.add(new THREE.AmbientLight(0x223044, 1.1))
+    space.add(new THREE.AmbientLight(0x1a2436, 1.5))
 
-    type Planet = { mesh: THREE.Mesh; body: Body; angle: number }
+    type Planet = { mesh: THREE.Mesh; angle: number; orbit: number; speed: number; tilt: number; spin: number }
     const planets: Planet[] = []
     let earthMesh: THREE.Mesh | null = null
+    let earthAtmosphere: THREE.ShaderMaterial | null = null
 
     BODIES.forEach((body, i) => {
-      const geo = track(new THREE.SphereGeometry(body.radius, 40, 40))
-      const matParams: THREE.MeshStandardMaterialParameters = {
-        color: body.color, roughness: 0.85, metalness: 0.05,
-      }
-      const mat = track(new THREE.MeshStandardMaterial(matParams))
-
-      if (body.texture) {
-        const tex = track(new THREE.TextureLoader().load(body.texture))
-        tex.colorSpace = THREE.SRGBColorSpace
-        mat.map = tex
-        mat.color.set(0xffffff)
-        mat.needsUpdate = true
-      }
-
+      const geo = track(new THREE.SphereGeometry(body.radius, 64, 64))
+      const mat = track(new THREE.MeshStandardMaterial({
+        map: loadTex(body.map), color: 0xffffff, roughness: 0.92, metalness: 0.02,
+      }))
       const mesh = new THREE.Mesh(geo, mat)
       mesh.rotation.z = body.tilt
       space.add(mesh)
 
       if (body.ring) {
-        const ringGeo = track(new THREE.RingGeometry(body.radius * 1.45, body.radius * 2.3, 96))
+        const ringGeo = track(new THREE.RingGeometry(body.radius * 1.5, body.radius * 2.55, 128))
+        const pos = ringGeo.attributes.position
+        const uv = ringGeo.attributes.uv
+        for (let k = 0; k < pos.count; k++) {
+          const d = Math.hypot(pos.getX(k), pos.getY(k))
+          const u = (d - body.radius * 1.5) / (body.radius * 1.05)
+          uv.setXY(k, u, 0.5)
+        }
         const ringMat = track(new THREE.MeshBasicMaterial({
-          color: 0xd8c9a3, side: THREE.DoubleSide, transparent: true, opacity: 0.55,
+          map: track(ringTexture()), transparent: true, side: THREE.DoubleSide,
+          depthWrite: false, opacity: 0.9,
         }))
         const ring = new THREE.Mesh(ringGeo, ringMat)
-        ring.rotation.x = Math.PI / 2.35
+        ring.rotation.x = Math.PI / 2.1
         mesh.add(ring)
       }
 
-      planets.push({ mesh, body, angle: (i / BODIES.length) * Math.PI * 2 })
+      planets.push({
+        mesh,
+        angle: (i / BODIES.length) * Math.PI * 2,
+        orbit: body.orbit,
+        speed: body.speed,
+        tilt: body.tilt,
+        spin: 0.05 + Math.random() * 0.06,
+      })
 
       if (body.name === 'Earth') {
         earthMesh = mesh
-        const atmo = new THREE.Mesh(
-          track(new THREE.SphereGeometry(body.radius * 1.12, 32, 32)),
-          track(new THREE.MeshBasicMaterial({
-            color: BLUE, transparent: true, opacity: 0.18,
-            side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false,
-          }))
-        )
+        const atmoMat = new THREE.ShaderMaterial({
+          uniforms: {
+            uColor: { value: new THREE.Color(0x3aa0ff) },
+            uPower: { value: 3.2 },
+            uIntensity: { value: 1.0 },
+          },
+          vertexShader: `
+            varying vec3 vNormal;
+            varying vec3 vView;
+            void main() {
+              vNormal = normalize(normalMatrix * normal);
+              vec4 mv = modelViewMatrix * vec4(position, 1.0);
+              vView = -mv.xyz;
+              gl_Position = projectionMatrix * mv;
+            }
+          `,
+          fragmentShader: `
+            uniform vec3 uColor;
+            uniform float uPower;
+            uniform float uIntensity;
+            varying vec3 vNormal;
+            varying vec3 vView;
+            void main() {
+              float f = pow(1.0 - abs(dot(normalize(vView), normalize(vNormal))), uPower);
+              gl_FragColor = vec4(uColor * f * uIntensity, f * 0.85);
+            }
+          `,
+          transparent: true,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          side: THREE.BackSide,
+        })
+        track(atmoMat)
+        earthAtmosphere = atmoMat
+        const atmo = new THREE.Mesh(track(new THREE.SphereGeometry(body.radius * 1.16, 48, 48)), atmoMat)
         mesh.add(atmo)
       }
     })
 
-    type Flyby = { mesh: THREE.Mesh; from: THREE.Vector3; to: THREE.Vector3; t0: number; t1: number }
-    const flybys: Flyby[] = []
-    const flybyGeo = track(new THREE.IcosahedronGeometry(1, 0))
-    const flybyMat = track(new THREE.MeshStandardMaterial({ color: 0x6d6a63, roughness: 1 }))
-
     const path = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 14, 108),
-      new THREE.Vector3(24, -6, 74),
-      new THREE.Vector3(-26, 9, 52),
-      new THREE.Vector3(16, 2, 34),
-      new THREE.Vector3(-6, 0, 22),
+      new THREE.Vector3(0, 18, 130),
+      new THREE.Vector3(30, -8, 92),
+      new THREE.Vector3(-32, 12, 68),
+      new THREE.Vector3(20, 4, 46),
+      new THREE.Vector3(-10, 0, 30),
     ])
 
-    const T_SPACE = 5.5
-    const T_APPROACH = 2.4
-    const T_LAGOS = 2.8
-    const T_LOGO_HOLD = 1.4
+    const T_SPACE = 6.0
+    const T_APPROACH = 3.2
+    const T_LAGOS = 3.2
+    const T_LOGO_HOLD = 1.5
 
     const state = { u: 0, approach: 0, lagos: 0, phase: 'space' as 'space' | 'approach' | 'lagos' }
-
     let approachFrom = new THREE.Vector3()
     let approachTo = new THREE.Vector3()
 
-    ;[2.4, 4.8].forEach((t, i) => {
+    type Flyby = { mesh: THREE.Mesh; from: THREE.Vector3; to: THREE.Vector3; t0: number; t1: number }
+    const flybys: Flyby[] = []
+    const flybyGeo = track(new THREE.IcosahedronGeometry(1, 1))
+    const flybyMat = track(new THREE.MeshStandardMaterial({ color: 0x7a7468, roughness: 1, flatShading: true }))
+
+    ;[2.6, 5.0].forEach((t, i) => {
       const u = THREE.MathUtils.clamp(t / T_SPACE, 0, 1)
       const camAt = path.getPointAt(u)
-      const perp = new THREE.Vector3(0, 1, 0).cross(camAt.clone().normalize()).normalize()
+      const perp = new THREE.Vector3(0.3, 1, 0).cross(camAt.clone().normalize()).normalize()
       const mesh = new THREE.Mesh(flybyGeo, flybyMat)
       mesh.position.copy(camAt)
+      mesh.scale.setScalar(1.4 + i * 0.8)
       space.add(mesh)
       flybys.push({
         mesh,
-        from: camAt.clone().add(perp.clone().multiplyScalar(i === 0 ? 42 : -38)).add(new THREE.Vector3(0, 10, 0)),
-        to: camAt.clone().add(perp.clone().multiplyScalar(i === 0 ? -42 : 38)).add(new THREE.Vector3(0, -10, 0)),
-        t0: t - 1.1,
-        t1: t + 1.1,
+        from: camAt.clone().add(perp.clone().multiplyScalar(i === 0 ? 46 : -42)).add(new THREE.Vector3(0, 12, 0)),
+        to: camAt.clone().add(perp.clone().multiplyScalar(i === 0 ? -46 : 42)).add(new THREE.Vector3(0, -12, 0)),
+        t0: t - 1.2,
+        t1: t + 1.2,
       })
     })
 
     const lagos = new THREE.Scene()
-    lagos.background = new THREE.Color(0x01040a)
-    lagos.fog = new THREE.FogExp2(0x01040a, 0.0022)
+    lagos.background = new THREE.Color(0x02060d)
+    lagos.fog = new THREE.FogExp2(0x04101c, 0.0018)
 
-    const lagosCamera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 2600)
-    lagosCamera.position.set(0, 190, 250)
+    const lagosCamera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.5, 3000)
+    lagosCamera.position.set(0, 230, 330)
 
-    lagos.add(new THREE.HemisphereLight(0x2a6f9e, 0x000000, 1.4))
-    const cityLight = new THREE.DirectionalLight(0x88bbff, 0.7)
-    cityLight.position.set(40, 120, 60)
-    lagos.add(cityLight)
+    lagos.add(new THREE.HemisphereLight(0x3a6f9e, 0x050505, 1.1))
+    const moon = new THREE.DirectionalLight(0x9cc4ff, 0.45)
+    moon.position.set(-120, 90, -60)
+    lagos.add(moon)
 
-    const ground = new THREE.Mesh(
-      track(new THREE.PlaneGeometry(900, 900)),
-      track(new THREE.MeshStandardMaterial({ color: 0x040a12, roughness: 0.95, metalness: 0.1 }))
+    const water = new THREE.Mesh(
+      track(new THREE.PlaneGeometry(2400, 2400)),
+      track(new THREE.MeshStandardMaterial({ color: 0x020c14, roughness: 0.12, metalness: 0.9 }))
     )
-    ground.rotation.x = -Math.PI / 2
-    lagos.add(ground)
+    water.rotation.x = -Math.PI / 2
+    lagos.add(water)
 
-    const lagoon = new THREE.Mesh(
-      track(new THREE.PlaneGeometry(900, 150)),
-      track(new THREE.MeshStandardMaterial({
-        color: 0x021420, roughness: 0.15, metalness: 0.85,
-        emissive: 0x001018, emissiveIntensity: 1,
-      }))
-    )
-    lagoon.rotation.x = -Math.PI / 2
-    lagoon.position.set(0, 0.15, 150)
-    lagos.add(lagoon)
+    const landMat = track(new THREE.MeshStandardMaterial({
+      map: track(streetTexture()), color: 0x8a9bb0, roughness: 0.82, metalness: 0.15,
+    }))
 
-    const grid = new THREE.GridHelper(600, 60, 0x0a3550, 0x06192a)
-    grid.position.y = 0.2
-    lagos.add(grid)
+    const addLand = (rx: number, rz: number, cx: number, cz: number, jitter: number) => {
+      const shape = ellipseShape(rx, rz, 128, jitter)
+      const geo = track(new THREE.ExtrudeGeometry(shape, { depth: 3, bevelEnabled: false, curveSegments: 6 }))
+      const mesh = new THREE.Mesh(geo, landMat)
+      mesh.rotation.x = -Math.PI / 2
+      mesh.position.set(cx, 0, cz)
+      lagos.add(mesh)
+      return mesh
+    }
 
-    const BUILDINGS = isSmall ? 420 : 900
+    addLand(420, 230, 0, -300, 0.06)
+    addLand(120, 46, 40, 40, 0.10)
+    addLand(210, 40, 300, 120, 0.08)
+    addLand(150, 34, 210, 20, 0.09)
+
+    const bridgeMat = track(new THREE.MeshStandardMaterial({
+      color: 0x121a24, roughness: 0.7, metalness: 0.4,
+      emissive: BLUE, emissiveIntensity: 0.35,
+    }))
+    const bridge = new THREE.Mesh(track(new THREE.BoxGeometry(7, 2.5, 260)), bridgeMat)
+    bridge.position.set(-20, 4, -120)
+    bridge.rotation.y = 0.16
+    lagos.add(bridge)
+
+    const bridge2 = new THREE.Mesh(track(new THREE.BoxGeometry(6, 2.2, 200)), bridgeMat)
+    bridge2.position.set(210, 4, -60)
+    bridge2.rotation.y = -0.32
+    lagos.add(bridge2)
+
+    const BUILDINGS = isSmall ? 500 : 1500
     const cityGeo = track(new THREE.BoxGeometry(1, 1, 1))
     const cityMat = track(new THREE.MeshStandardMaterial({
-      color: 0x0a1220,
-      emissive: BLUE,
-      emissiveIntensity: 1.5,
+      color: 0x0b1420,
+      emissive: 0xffffff,
+      emissiveIntensity: 1.35,
       emissiveMap: track(windowTexture()),
-      roughness: 0.6,
-      metalness: 0.3,
+      roughness: 0.55,
+      metalness: 0.35,
     }))
     const city = new THREE.InstancedMesh(cityGeo, cityMat, BUILDINGS)
     const m4 = new THREE.Matrix4()
@@ -301,103 +484,154 @@ export function CinematicIntro({ onComplete }: Props) {
     const v = new THREE.Vector3()
     const sc = new THREE.Vector3()
 
-    for (let i = 0; i < BUILDINGS; i++) {
-      const a = Math.random() * Math.PI * 2
-      const dist = Math.pow(Math.random(), 0.65) * 190
-      const x = Math.cos(a) * dist
-      const z = Math.sin(a) * dist * 0.8
-      const h = 3 + Math.pow(Math.random(), 2.2) * 46
-      const w = 2 + Math.random() * 4
-      v.set(x, h / 2, z)
+    const islandA = { cx: 40, cz: 40, rx: 118, rz: 44 }
+    const islandB = { cx: 300, cz: 120, rx: 206, rz: 38 }
+    const islandC = { cx: 210, cz: 20, rx: 146, rz: 32 }
+    const mainland = { cx: 0, cz: -300, rx: 416, rz: 226 }
+
+    let placed = 0
+    let guard = 0
+    while (placed < BUILDINGS && guard < BUILDINGS * 40) {
+      guard++
+      const onMain = Math.random() < 0.55
+      const zone = onMain
+        ? mainland
+        : [islandA, islandB, islandC][Math.floor(Math.random() * 3)]
+
+      const x = zone.cx + (Math.random() * 2 - 1) * zone.rx * 0.94
+      const z = zone.cz + (Math.random() * 2 - 1) * zone.rz * 0.94
+      if (!insideEllipse(x, z, zone.cx, zone.cz, zone.rx * 0.95, zone.rz * 0.95)) continue
+
+      const central = insideEllipse(x, z, 40, 40, 55, 30) || insideEllipse(x, z, 210, 20, 70, 22)
+      const h = central
+        ? 12 + Math.pow(Math.random(), 1.7) * 78
+        : 3 + Math.pow(Math.random(), 2.4) * 34
+      const w = 2.4 + Math.random() * 4.5
+
+      v.set(x, h / 2 + 3, z)
       sc.set(w, h, w)
       m4.compose(v, q, sc)
-      city.setMatrixAt(i, m4)
+      city.setMatrixAt(placed, m4)
+      placed++
     }
+    city.count = placed
     city.instanceMatrix.needsUpdate = true
     lagos.add(city)
 
+    const hazeTex = track(radialTexture([
+      [0, 'rgba(120,190,255,0.34)'],
+      [0.35, 'rgba(70,130,200,0.14)'],
+      [1, 'rgba(40,90,160,0)'],
+    ]))
+    const haze = new THREE.Sprite(track(new THREE.SpriteMaterial({
+      map: hazeTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.85,
+    })))
+    haze.scale.set(1100, 420, 1)
+    haze.position.set(80, 40, 0)
+    lagos.add(haze)
+
     const beam = new THREE.Mesh(
-      track(new THREE.CylinderGeometry(0.5, 0.5, 130, 12, 1, true)),
+      track(new THREE.CylinderGeometry(0.9, 0.9, 220, 16, 1, true)),
       track(new THREE.MeshBasicMaterial({
-        color: BLUE, transparent: true, opacity: 0.35,
+        color: BLUE, transparent: true, opacity: 0.4,
         blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
       }))
     )
-    beam.position.set(0, 65, 0)
+    beam.position.set(40, 110, 40)
     lagos.add(beam)
 
     const rings: THREE.Mesh[] = []
     for (let i = 0; i < 3; i++) {
       const ring = new THREE.Mesh(
-        track(new THREE.RingGeometry(2.4, 2.9, 72)),
+        track(new THREE.RingGeometry(4, 4.7, 96)),
         track(new THREE.MeshBasicMaterial({
-          color: BLUE, transparent: true, opacity: 0.0,
+          color: BLUE, transparent: true, opacity: 0,
           blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
         }))
       )
       ring.rotation.x = -Math.PI / 2
-      ring.position.y = 1.2
+      ring.position.set(40, 4, 40)
       lagos.add(ring)
       rings.push(ring)
+    }
+
+    const composerLagos = useBloom ? new EffectComposer(renderer) : null
+    if (composerLagos) {
+      composerLagos.setPixelRatio(pixelRatio)
+      composerLagos.setSize(window.innerWidth, window.innerHeight)
     }
 
     const clock = new THREE.Clock()
     let raf = 0
 
-    const renderSpace = (t: number, cam: THREE.Camera) => {
+    const renderSpace = (t: number, cam: THREE.PerspectiveCamera) => {
       planets.forEach((p) => {
-        const a = p.angle + t * p.body.speed
-        p.mesh.position.set(Math.cos(a) * p.body.orbit, 0, Math.sin(a) * p.body.orbit)
-        p.mesh.rotation.y += 0.004
-        p.mesh.rotation.z = p.body.tilt
+        const a = p.angle + t * p.speed
+        p.mesh.position.set(Math.cos(a) * p.orbit, 0, Math.sin(a) * p.orbit)
+        p.mesh.rotation.z = p.tilt
+        p.mesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), p.spin * 0.02)
       })
 
-      starsFar.rotation.y = t * 0.004
-      starsNear.rotation.y = t * 0.009
-      sunCore.rotation.y = t * 0.05
-      glow.scale.setScalar(46 + Math.sin(t * 1.6) * 1.6)
+      coronaMat.uniforms.uTime.value = t
+      corona.scale.setScalar(1 + Math.sin(t * 1.3) * 0.02)
+      flare.material.opacity = 0.5 + Math.sin(t * 0.9) * 0.06
+      starsNear.rotation.y = t * 0.006
+      starsFar.rotation.y = t * 0.002
 
       flybys.forEach((f) => {
         const k = THREE.MathUtils.clamp((t - f.t0) / (f.t1 - f.t0), 0, 1)
         f.mesh.visible = k > 0 && k < 1
         if (f.mesh.visible) {
           f.mesh.position.lerpVectors(f.from, f.to, k)
-          f.mesh.rotation.x = t * 2
-          f.mesh.rotation.y = t * 1.4
+          f.mesh.rotation.x = t * 1.6
+          f.mesh.rotation.y = t * 1.1
         }
       })
 
       if (state.phase === 'space') {
         const u = THREE.MathUtils.clamp(state.u, 0, 1)
         cam.position.copy(path.getPointAt(u))
-        const towardEarth = THREE.MathUtils.smoothstep(u, 0.6, 1)
-        const target = new THREE.Vector3()
-          .lerpVectors(new THREE.Vector3(0, 0, 0), earthMesh ? earthMesh.position : new THREE.Vector3(), towardEarth)
+        const towardEarth = THREE.MathUtils.smoothstep(u, 0.62, 1)
+        const target = new THREE.Vector3().lerpVectors(
+          new THREE.Vector3(0, 0, 0),
+          earthMesh ? earthMesh.position : new THREE.Vector3(),
+          towardEarth
+        )
         cam.lookAt(target)
+        if (cam.fov !== 55) {
+          cam.fov = 55
+          cam.updateProjectionMatrix()
+        }
       } else {
         const k = THREE.MathUtils.clamp(state.approach, 0, 1)
-        const eased = k * k
+        const eased = Math.pow(k, 2.4)
         cam.position.lerpVectors(approachFrom, approachTo, eased)
         if (earthMesh) cam.lookAt(earthMesh.position)
+        const fov = THREE.MathUtils.lerp(55, 30, eased)
+        if (Math.abs(cam.fov - fov) > 0.01) {
+          cam.fov = fov
+          cam.updateProjectionMatrix()
+        }
+        if (earthAtmosphere) earthAtmosphere.uniforms.uIntensity.value = 1 + eased * 5
       }
     }
 
     const renderLagos = (t: number) => {
       const k = THREE.MathUtils.clamp(state.lagos, 0, 1)
       const e = 1 - Math.pow(1 - k, 3)
-      lagosCamera.position.set(0, 190 - 150 * e, 250 - 180 * e)
-      lagosCamera.lookAt(0, 10 * e, 0)
+      lagosCamera.position.set(0, 230 - 165 * e, 330 - 250 * e)
+      lagosCamera.lookAt(40 * e, 20 * e, 30 * e)
 
       rings.forEach((ring, i) => {
-        const phase = (t * 0.55 + i * 0.33) % 1
-        const s = 1 + phase * 26
-        ring.scale.setScalar(s)
+        const phase = (t * 0.5 + i * 0.33) % 1
+        ring.scale.setScalar(1 + phase * 22)
         const mat = ring.material as THREE.MeshBasicMaterial
-        mat.opacity = Math.max(0, 0.75 * (1 - phase))
+        mat.opacity = Math.max(0, 0.8 * (1 - phase))
       })
 
       const beamMat = beam.material as THREE.MeshBasicMaterial
-      beamMat.opacity = 0.25 + Math.sin(t * 2.2) * 0.08
+      beamMat.opacity = 0.3 + Math.sin(t * 2.2) * 0.1
+      haze.material.opacity = 0.8 + Math.sin(t * 0.8) * 0.08
     }
 
     const tick = () => {
@@ -407,12 +641,27 @@ export function CinematicIntro({ onComplete }: Props) {
 
       if (state.phase === 'lagos') {
         renderLagos(t)
-        renderer.render(lagos, lagosCamera)
+        if (composerLagos) composerLagos.render()
+        else renderer.render(lagos, lagosCamera)
       } else {
         renderSpace(t, camera)
-        renderer.render(space, camera)
+        if (composer) composer.render()
+        else renderer.render(space, camera)
       }
     }
+
+    if (composer) {
+      composer.addPass(new RenderPass(space, camera))
+      composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.85, 0.7, 0.62))
+      composer.addPass(new OutputPass())
+    }
+
+    if (composerLagos) {
+      composerLagos.addPass(new RenderPass(lagos, lagosCamera))
+      composerLagos.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.1, 0.75, 0.35))
+      composerLagos.addPass(new OutputPass())
+    }
+
     tick()
 
     const swapToLagos = () => {
@@ -434,14 +683,14 @@ export function CinematicIntro({ onComplete }: Props) {
         approachFrom = camera.position.clone()
         const target = earthMesh ? earthMesh.position.clone() : new THREE.Vector3()
         const dir = approachFrom.clone().sub(target).normalize()
-        approachTo = target.clone().add(dir.multiplyScalar(5.4))
+        approachTo = target.clone().add(dir.multiplyScalar(2.9))
       })
       .to(state, { approach: 1, duration: T_APPROACH, ease: 'power2.in' })
-      .to(flashRef.current, { opacity: 1, duration: 0.45, ease: 'power2.in' }, '-=0.5')
+      .to(flashRef.current, { opacity: 1, duration: 0.5, ease: 'power2.in' }, '-=0.55')
       .add(swapToLagos)
-      .to(flashRef.current, { opacity: 0, duration: 0.7, ease: 'power2.out' })
-      .to(state, { lagos: 1, duration: T_LAGOS, ease: 'power2.out' }, '-=0.3')
-      .to(blackRef.current, { opacity: 1, duration: 0.7, ease: 'power2.inOut' })
+      .to(flashRef.current, { opacity: 0, duration: 0.8, ease: 'power2.out' })
+      .to(state, { lagos: 1, duration: T_LAGOS, ease: 'power2.out' }, '-=0.35')
+      .to(blackRef.current, { opacity: 1, duration: 0.75, ease: 'power2.inOut' })
 
     const revealLogo = () => {
       const root = logoRef.current
@@ -449,13 +698,13 @@ export function CinematicIntro({ onComplete }: Props) {
       const [img, title, sub] = Array.from(root.children) as HTMLElement[]
 
       gsap.set(root, { opacity: 1 })
-      gsap.set([title, sub], { opacity: 0, y: 24 })
-      gsap.set(img, { opacity: 0, scale: 0.55, filter: 'blur(18px)' })
+      gsap.set([title, sub], { opacity: 0, y: 26 })
+      gsap.set(img, { opacity: 0, scale: 0.55, filter: 'blur(20px)' })
 
       gsap.timeline({ onComplete: finish })
-        .to(img, { opacity: 1, scale: 1, filter: 'blur(0px)', duration: 1.1, ease: 'expo.out' })
-        .to(title, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.45')
-        .to(sub, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.55')
+        .to(img, { opacity: 1, scale: 1, filter: 'blur(0px)', duration: 1.2, ease: 'expo.out' })
+        .to(title, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.5')
+        .to(sub, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.6')
         .to({}, { duration: T_LOGO_HOLD })
         .to(root, { opacity: 0, duration: 0.8, ease: 'power2.inOut' })
     }
@@ -488,6 +737,8 @@ export function CinematicIntro({ onComplete }: Props) {
       camera.updateProjectionMatrix()
       lagosCamera.aspect = w / h
       lagosCamera.updateProjectionMatrix()
+      composer?.setSize(w, h)
+      composerLagos?.setSize(w, h)
     }
     window.addEventListener('resize', onResize)
 
@@ -497,6 +748,8 @@ export function CinematicIntro({ onComplete }: Props) {
       window.removeEventListener('resize', onResize)
       skipRef.current?.removeEventListener('click', skip)
       tl.kill()
+      composer?.dispose()
+      composerLagos?.dispose()
       disposables.forEach((d) => d.dispose())
       renderer.dispose()
       renderer.forceContextLoss()
