@@ -11,6 +11,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 type Props = { onComplete: () => void }
 
 const BLUE = 0x00a3ff
+const TAGLINE = 'THE POWER OF MAKING GAMES'
 
 const CONSTELLATIONS = [
   'ORION', 'LYRA', 'CYGNUS', 'DRACO', 'PERSEUS', 'CEPHEUS',
@@ -152,14 +153,14 @@ function insideEllipse(x: number, z: number, cx: number, cz: number, rx: number,
 }
 
 const BODIES = [
-  { name: 'MERCURY', radius: 1.4, orbit: 52, speed: 0.20, tilt: 0.02, map: '/mercury.png' },
-  { name: 'VENUS', radius: 2.6, orbit: 70, speed: 0.15, tilt: 0.06, map: '/venus.png' },
-  { name: 'EARTH', radius: 5.5, orbit: 95, speed: 0.10, tilt: 0.41, map: '/earth-day.png' },
-  { name: 'MARS', radius: 2.2, orbit: 118, speed: 0.08, tilt: 0.05, map: '/mars.png' },
-  { name: 'JUPITER', radius: 11, orbit: 158, speed: 0.045, tilt: 0.05, map: '/jupiter.jpg' },
-  { name: 'SATURN', radius: 9, orbit: 200, speed: 0.032, tilt: 0.47, map: '/saturn.png', ring: true },
-  { name: 'URANUS', radius: 5.5, orbit: 245, speed: 0.022, tilt: 0.97, map: '/uranus.png' },
-  { name: 'NEPTUNE', radius: 5.2, orbit: 285, speed: 0.016, tilt: 0.49, map: '/neptune.png' },
+  { name: 'MERCURY', radius: 2.2, orbit: 58, speed: 0.20, tilt: 0.02, map: '/mercury.png' },
+  { name: 'VENUS', radius: 4, orbit: 80, speed: 0.15, tilt: 0.06, map: '/venus.png' },
+  { name: 'EARTH', radius: 9, orbit: 110, speed: 0.10, tilt: 0.41, map: '/earth-day.png' },
+  { name: 'MARS', radius: 3.4, orbit: 135, speed: 0.08, tilt: 0.05, map: '/mars.png' },
+  { name: 'JUPITER', radius: 16, orbit: 180, speed: 0.045, tilt: 0.05, map: '/jupiter.jpg' },
+  { name: 'SATURN', radius: 13, orbit: 225, speed: 0.032, tilt: 0.47, map: '/saturn.png', ring: true },
+  { name: 'URANUS', radius: 8.5, orbit: 275, speed: 0.022, tilt: 0.97, map: '/uranus.png' },
+  { name: 'NEPTUNE', radius: 8, orbit: 320, speed: 0.016, tilt: 0.49, map: '/neptune.png' },
 ]
 
 export function CinematicIntro({ onComplete }: Props) {
@@ -169,6 +170,7 @@ export function CinematicIntro({ onComplete }: Props) {
   const logoRef = useRef<HTMLDivElement>(null)
   const skipRef = useRef<HTMLButtonElement>(null)
   const barsRef = useRef<HTMLDivElement>(null)
+  const phraseRef = useRef<HTMLDivElement>(null)
 
   const doneRef = useRef(onComplete)
   doneRef.current = onComplete
@@ -211,7 +213,10 @@ export function CinematicIntro({ onComplete }: Props) {
     const loadTex = (url: string): THREE.Texture => {
       const tex = loader.load(url)
       tex.colorSpace = THREE.SRGBColorSpace
-      tex.anisotropy = 2
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy()
+      tex.minFilter = THREE.LinearMipmapLinearFilter
+      tex.magFilter = THREE.LinearFilter
+      tex.generateMipmaps = true
       return track(tex)
     }
 
@@ -334,7 +339,7 @@ export function CinematicIntro({ onComplete }: Props) {
     space.add(sunGroup)
 
     const sunMat = track(new THREE.MeshBasicMaterial({ map: loadTex('/sun.jpg'), color: 0xffffff }))
-    const sunCore = new THREE.Mesh(track(new THREE.SphereGeometry(14, 64, 64)), sunMat)
+    const sunCore = new THREE.Mesh(track(new THREE.SphereGeometry(20, 96, 96)), sunMat)
     sunGroup.add(sunCore)
 
     const coronaMat = new THREE.ShaderMaterial({
@@ -366,7 +371,7 @@ export function CinematicIntro({ onComplete }: Props) {
       depthWrite: false,
     })
     track(coronaMat)
-    const corona = new THREE.Mesh(track(new THREE.SphereGeometry(18, 48, 48)), coronaMat)
+    const corona = new THREE.Mesh(track(new THREE.SphereGeometry(25, 48, 48)), coronaMat)
     sunGroup.add(corona)
 
     const flare = new THREE.Sprite(track(new THREE.SpriteMaterial({
@@ -378,7 +383,7 @@ export function CinematicIntro({ onComplete }: Props) {
       ])),
       blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.9,
     })))
-    flare.scale.setScalar(120)
+    flare.scale.setScalar(170)
     sunGroup.add(flare)
 
     sunGroup.add(new THREE.PointLight(0xfff6e6, 3.6, 0, 0))
@@ -402,7 +407,7 @@ export function CinematicIntro({ onComplete }: Props) {
         color: 0x3f6f9e, transparent: true, opacity: 0.2,
       }))))
 
-      const geo = track(new THREE.SphereGeometry(body.radius, 64, 64))
+      const geo = track(new THREE.SphereGeometry(body.radius, body.radius > 4 ? 96 : 64, body.radius > 4 ? 96 : 64))
       const mat = track(new THREE.MeshStandardMaterial({
         map: loadTex(body.map), roughness: 0.92, metalness: 0.02,
       }))
@@ -505,11 +510,11 @@ export function CinematicIntro({ onComplete }: Props) {
     belt.add(asteroids)
 
     const path = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 70, 430),
-      new THREE.Vector3(150, -60, 330),
-      new THREE.Vector3(-170, 70, 250),
-      new THREE.Vector3(90, 20, 170),
-      new THREE.Vector3(-25, 0, 120),
+      new THREE.Vector3(0, 34, 470),
+      new THREE.Vector3(18, 12, 350),
+      new THREE.Vector3(-12, 2, 250),
+      new THREE.Vector3(6, -2, 175),
+      new THREE.Vector3(0, 0, 128),
     ])
 
     const T_SPACE = 6.0
@@ -542,152 +547,60 @@ export function CinematicIntro({ onComplete }: Props) {
     })
 
     const world = new THREE.Scene()
-    world.background = new THREE.Color(0x05030f)
-    world.fog = new THREE.FogExp2(0x0a0620, 0.0028)
+    world.background = new THREE.Color(0x02030a)
+    world.fog = new THREE.FogExp2(0x02030a, 0.0015)
 
-    const worldCamera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 4000)
-    worldCamera.position.set(0, 150, 240)
+    const worldCamera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 5000)
+    worldCamera.position.set(0, 200, 340)
 
-    world.add(new THREE.HemisphereLight(0x7a6bff, 0x0a0520, 1.3))
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2)
-    keyLight.position.set(80, 160, 60)
+    world.add(new THREE.HemisphereLight(0x5a6bff, 0x02030a, 0.9))
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.4)
+    keyLight.position.set(60, 160, 90)
     world.add(keyLight)
-    const rimLight = new THREE.PointLight(0x00a3ff, 2.4, 0, 0)
-    rimLight.position.set(0, 50, -60)
+    const rimLight = new THREE.PointLight(0x00a3ff, 2.2, 0, 0)
+    rimLight.position.set(0, 40, -140)
     world.add(rimLight)
 
-    const gridFloor = new THREE.GridHelper(1600, 80, 0x22306a, 0x121a38)
-    gridFloor.position.y = -90
+    const gridFloor = new THREE.GridHelper(2400, 120, 0x1c3a6e, 0x0e1c38)
+    gridFloor.position.y = -20
     world.add(gridFloor)
 
-    const islands = new THREE.Group()
-    world.add(islands)
+    const gridCeiling = new THREE.GridHelper(2400, 60, 0x14223c, 0x0a1224)
+    gridCeiling.position.y = 280
+    world.add(gridCeiling)
 
-    const rockMaterial = track(new THREE.MeshStandardMaterial({
-      color: 0x1a1f3d, roughness: 0.95, metalness: 0.05, flatShading: true,
-    }))
-    const grassMaterial = track(new THREE.MeshStandardMaterial({
-      color: 0x2b3570, roughness: 0.8, metalness: 0.1,
-      emissive: 0x0a1230, emissiveIntensity: 1,
-    }))
-    const glowMaterial = track(new THREE.MeshStandardMaterial({
-      color: 0x0a1030, emissive: BLUE, emissiveIntensity: 2.2, roughness: 0.4, metalness: 0.4,
-    }))
-
-    const islandData: Array<{ mesh: THREE.Group; phase: number }> = []
-
-    const makeIsland = (x: number, z: number, r: number, h: number) => {
-      const g = new THREE.Group()
-
-      const rock = new THREE.Mesh(track(new THREE.ConeGeometry(r, h, 7, 1)), rockMaterial)
-      rock.rotation.x = Math.PI
-      rock.position.y = -h / 2
-      g.add(rock)
-
-      const top = new THREE.Mesh(track(new THREE.CylinderGeometry(r, r * 0.96, h * 0.08, 7)), grassMaterial)
-      top.position.y = h * 0.04
-      g.add(top)
-
-      for (let i = 0; i < 4; i++) {
-        const bw = r * (0.12 + Math.random() * 0.16)
-        const bh = r * (0.15 + Math.random() * 0.45)
-        const block = new THREE.Mesh(track(new THREE.BoxGeometry(bw, bh, bw)), glowMaterial)
-        const ang = Math.random() * Math.PI * 2
-        const rad = Math.random() * r * 0.6
-        block.position.set(Math.cos(ang) * rad, bh / 2 + h * 0.05, Math.sin(ang) * rad)
-        g.add(block)
-      }
-
-      g.position.set(x, 0, z)
-      islands.add(g)
-      islandData.push({ mesh: g, phase: Math.random() * Math.PI * 2 })
-    }
-
-    makeIsland(0, 0, 26, 34)
-    makeIsland(-70, -30, 16, 24)
-    makeIsland(64, -44, 18, 28)
-    makeIsland(-96, 42, 12, 18)
-    makeIsland(92, 36, 14, 22)
-    makeIsland(-30, 92, 10, 14)
-    makeIsland(40, 96, 11, 16)
-    makeIsland(-140, -70, 20, 30)
-    makeIsland(150, -60, 17, 26)
-
-    const monolith = new THREE.Mesh(track(new THREE.BoxGeometry(7, 46, 7)), glowMaterial)
-    monolith.position.set(0, 23, 0)
-    world.add(monolith)
-
-    const beam = new THREE.Mesh(
-      track(new THREE.CylinderGeometry(1.6, 0.4, 300, 18, 1, true)),
-      track(new THREE.MeshBasicMaterial({
-        color: BLUE, transparent: true, opacity: 0.35,
-        blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
-      }))
-    )
-    beam.position.set(0, 150, 0)
-    world.add(beam)
-
-    const rings: THREE.Mesh[] = []
-    for (let i = 0; i < 3; i++) {
-      const ring = new THREE.Mesh(
-        track(new THREE.RingGeometry(30, 31.4, 128)),
-        track(new THREE.MeshBasicMaterial({
-          color: BLUE, transparent: true, opacity: 0,
-          blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
-        }))
-      )
-      ring.rotation.x = -Math.PI / 2
-      ring.position.set(0, 1, 0)
-      world.add(ring)
-      rings.push(ring)
-    }
-
-    const spinShapes: THREE.Mesh[] = []
-    const shapeSpecs = [
-      { geo: new THREE.TorusGeometry(9, 2.2, 16, 48), x: 46, y: 48, z: -28, c: 0x00a3ff },
-      { geo: new THREE.OctahedronGeometry(6, 0), x: -52, y: 62, z: -18, c: 0x9a7bff },
-      { geo: new THREE.IcosahedronGeometry(5, 0), x: 18, y: 84, z: -60, c: 0xff7bd0 },
-      { geo: new THREE.TorusKnotGeometry(6, 1.4, 64, 8), x: -20, y: 34, z: 40, c: 0x5ce1ff },
+    const objects: THREE.Mesh[] = []
+    const shapes = [
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.IcosahedronGeometry(1, 0),
+      new THREE.OctahedronGeometry(1, 0),
+      new THREE.TorusGeometry(1, 0.34, 12, 36),
+      new THREE.ConeGeometry(1, 1.7, 6),
+      new THREE.DodecahedronGeometry(1, 0),
     ]
-    shapeSpecs.forEach((spec) => {
-      const mesh = new THREE.Mesh(track(spec.geo), track(new THREE.MeshStandardMaterial({
-        color: 0x0a1030, emissive: spec.c, emissiveIntensity: 1.6, roughness: 0.35, metalness: 0.6,
-      })))
-      mesh.position.set(spec.x, spec.y, spec.z)
+    const palette = [0x00a3ff, 0x7c5cff, 0xff5cc8, 0x35e0c0, 0xffb347]
+
+    for (let i = 0; i < 18; i++) {
+      const mat = track(new THREE.MeshStandardMaterial({
+        color: 0x05060f,
+        emissive: palette[i % palette.length],
+        emissiveIntensity: 1.45,
+        roughness: 0.35,
+        metalness: 0.55,
+        flatShading: true,
+      }))
+      const mesh = new THREE.Mesh(track(shapes[i % shapes.length]), mat)
+      const s = 4 + Math.random() * 9
+      mesh.scale.setScalar(s)
+      mesh.position.set(
+        (Math.random() - 0.5) * 430,
+        5 + Math.random() * 150,
+        (Math.random() - 0.5) * 430
+      )
+      mesh.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3)
       world.add(mesh)
-      spinShapes.push(mesh)
-    })
-
-    const motes = (() => {
-      const n = 500
-      const pos = new Float32Array(n * 3)
-      for (let i = 0; i < n; i++) {
-        pos[i * 3] = (Math.random() - 0.5) * 420
-        pos[i * 3 + 1] = Math.random() * 200 - 40
-        pos[i * 3 + 2] = (Math.random() - 0.5) * 420
-      }
-      const geo = track(new THREE.BufferGeometry())
-      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-      const pts = new THREE.Points(geo, track(new THREE.PointsMaterial({
-        color: 0x9fd0ff, size: 1.6, transparent: true, opacity: 0.7,
-        depthWrite: false, blending: THREE.AdditiveBlending,
-      })))
-      world.add(pts)
-      return pts
-    })()
-
-    const haze = new THREE.Sprite(track(new THREE.SpriteMaterial({
-      map: track(radialTexture([
-        [0, 'rgba(120,160,255,0.30)'],
-        [0.4, 'rgba(90,110,230,0.12)'],
-        [1, 'rgba(60,70,200,0)'],
-      ])),
-      blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.8,
-    })))
-    haze.scale.set(900, 380, 1)
-    haze.position.set(0, 30, -80)
-    world.add(haze)
-
+      objects.push(mesh)
+    }
 
     const composerWorld = useBloom ? new EffectComposer(renderer) : null
     if (composerWorld) {
@@ -702,13 +615,6 @@ export function CinematicIntro({ onComplete }: Props) {
     const desiredTarget = new THREE.Vector3(0, 0, 0)
     const axisY = new THREE.Vector3(0, 1, 0)
     const labelOffset = new THREE.Vector3()
-
-    const shake = (t: number) => {
-      const x = Math.sin(t * 0.83) * 0.5 + Math.sin(t * 2.11) * 0.28 + Math.sin(t * 3.71) * 0.12
-      const y = Math.cos(t * 0.71) * 0.5 + Math.sin(t * 1.73) * 0.3 + Math.cos(t * 4.11) * 0.1
-      const roll = Math.sin(t * 0.61) * 0.6 + Math.sin(t * 1.37) * 0.4
-      return { x, y, roll }
-    }
 
     let orbitPhase = 0
     let prevT = 0
@@ -778,52 +684,24 @@ export function CinematicIntro({ onComplete }: Props) {
         if (earthHalo) earthHalo.opacity = 0.35 + eased * 0.55
       }
 
-      smoothTarget.lerp(desiredTarget, 1 - Math.exp(-4.5 * dt))
-
-      const dist = cam.position.distanceTo(smoothTarget)
-      const worldAmp = Math.min(0.45, Math.max(0.015, dist * 0.012))
-
-      const s = shake(t)
-      cam.position.x += s.x * worldAmp
-      cam.position.y += s.y * worldAmp
+      smoothTarget.lerp(desiredTarget, 1 - Math.exp(-3.2 * dt))
       cam.lookAt(smoothTarget)
-      cam.rotateZ(s.roll * worldAmp * 0.01)
     }
 
     const renderWorld = (t: number) => {
       const k = THREE.MathUtils.clamp(state.world, 0, 1)
       const e = 1 - Math.pow(1 - k, 3)
-      worldCamera.position.set(0, 235 - 125 * e, 320 - 235 * e)
-      worldCamera.lookAt(0, 34 + 6 * e, 0)
+      worldCamera.position.set(0, 205 - 155 * e, 345 - 250 * e)
+      worldCamera.lookAt(0, 55 - 10 * e, 0)
 
-      const s = shake(t)
-      worldCamera.position.x += s.x * 0.6
-      worldCamera.position.y += s.y * 0.4
-      worldCamera.rotateZ(s.roll * 0.006)
-
-      islandData.forEach((isl, i) => {
-        isl.mesh.position.y = Math.sin(t * 0.55 + isl.phase) * 3.2
-        isl.mesh.rotation.y = t * 0.05 + i * 0.4
+      objects.forEach((m, i) => {
+        m.rotation.x = t * (0.10 + (i % 5) * 0.03)
+        m.rotation.y = t * (0.08 + (i % 4) * 0.03)
+        m.position.y += Math.sin(t * 0.5 + i * 1.7) * 0.02
       })
 
-      spinShapes.forEach((m, i) => {
-        m.rotation.x = t * (0.18 + i * 0.05)
-        m.rotation.y = t * (0.14 + i * 0.04)
-        m.position.y += Math.sin(t * 0.7 + i) * 0.01
-      })
-
-      motes.rotation.y = t * 0.015
-      monolith.scale.y = 1 + Math.sin(t * 1.4) * 0.012
-
-      rings.forEach((ring, i) => {
-        const phase = (t * 0.45 + i * 0.33) % 1
-        ring.scale.setScalar(1 + phase * 12)
-        const mat = ring.material as THREE.MeshBasicMaterial
-        mat.opacity = Math.max(0, 0.75 * (1 - phase))
-      })
-
-      ;(beam.material as THREE.MeshBasicMaterial).opacity = 0.3 + Math.sin(t * 2.2) * 0.1
-      haze.material.opacity = 0.8 + Math.sin(t * 0.8) * 0.08
+      gridFloor.position.z = (t * 6) % 20
+      gridCeiling.position.z = (t * 3) % 40
     }
 
     const tick = () => {
@@ -886,6 +764,8 @@ export function CinematicIntro({ onComplete }: Props) {
       .add(swapToWorld)
       .to(flashRef.current, { opacity: 0, duration: 0.8, ease: 'power2.out' })
       .to(state, { world: 1, duration: T_WORLD, ease: 'power2.out' }, '-=0.35')
+      .to(phraseRef.current, { opacity: 1, duration: 1.1, ease: 'power2.out' }, '-=2.2')
+      .to(phraseRef.current, { opacity: 0, duration: 0.5, ease: 'power2.in' }, '+=1.4')
       .to(blackRef.current, { opacity: 1, duration: 0.75, ease: 'power2.inOut' })
       .to(barsRef.current, { opacity: 0, duration: 0.9, ease: 'power2.inOut' }, '-=0.4')
 
@@ -971,13 +851,19 @@ export function CinematicIntro({ onComplete }: Props) {
 
       <div ref={flashRef} className="pointer-events-none absolute inset-0 z-[7] bg-white opacity-0" />
 
+      <div ref={phraseRef} className="pointer-events-none absolute inset-0 z-[8] flex items-center justify-center opacity-0">
+        <p className="px-8 text-center text-xl font-semibold uppercase leading-relaxed tracking-[0.22em] text-white md:text-4xl md:tracking-[0.3em]">
+          {TAGLINE}
+        </p>
+      </div>
+
       <div ref={blackRef} className="pointer-events-none absolute inset-0 z-[8] bg-black opacity-0" />
 
       <div ref={logoRef} className="absolute inset-0 z-[9] flex flex-col items-center justify-center opacity-0">
         <img src="/logo.png" alt="Evolved Tech" className="h-32 w-32 object-contain md:h-40 md:w-40" />
         <h1 className="mt-8 text-4xl font-extrabold tracking-tight text-white md:text-6xl">EVOLVED TECH</h1>
         <p className="mt-4 text-[10px] tracking-[0.45em] text-[#00A3FF] md:text-sm">
-          A WORLD WHERE GAMES ARE MADE
+          HOME OF LIMN ENGINE
         </p>
       </div>
 
