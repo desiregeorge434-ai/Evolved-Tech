@@ -2,17 +2,17 @@
 
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Loader2, Mail, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { AuthPanel } from '@/components/AuthPanel'
 import { GoogleButton } from '@/components/GoogleButton'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [needsConfirm, setNeedsConfirm] = useState(false)
+  const [resent, setResent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [next, setNext] = useState('/dashboard')
 
@@ -31,17 +31,27 @@ export default function LoginPage() {
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
 
     if (authError) {
+      const unconfirmed = /email not confirmed|not confirmed/i.test(authError.message)
+      setNeedsConfirm(unconfirmed)
       setError(
-        authError.message === 'Invalid login credentials'
-          ? 'That email and password combination did not work.'
-          : authError.message
+        unconfirmed
+          ? 'Your email is not confirmed yet. Check your inbox, or resend the link below.'
+          : authError.message === 'Invalid login credentials'
+            ? 'That email and password combination did not work.'
+            : authError.message
       )
       setLoading(false)
       return
     }
 
-    router.push(next)
-    router.refresh()
+    window.location.assign(next)
+  }
+
+  const resend = async () => {
+    const supabase = createClient()
+    const { error: resendError } = await supabase.auth.resend({ type: 'signup', email })
+    setResent(!resendError)
+    if (resendError) setError(resendError.message)
   }
 
   return (
@@ -86,9 +96,18 @@ export default function LoginPage() {
         />
 
         {error && (
-          <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs text-red-300">
-            {error}
-          </p>
+          <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3">
+            <p className="text-xs text-red-300">{error}</p>
+            {needsConfirm && (
+              <button
+                type="button"
+                onClick={resend}
+                className="mt-2 text-xs font-medium text-[#00A3FF] hover:underline"
+              >
+                {resent ? 'Confirmation email sent' : 'Resend confirmation email'}
+              </button>
+            )}
+          </div>
         )}
 
         <button
