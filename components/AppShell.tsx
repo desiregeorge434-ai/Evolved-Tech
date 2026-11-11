@@ -14,6 +14,9 @@ import {
   ArrowUpRight,
   Gamepad2,
   Milestone,
+  Info,
+  Boxes,
+  Mail,
   type LucideIcon,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -26,7 +29,10 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { href: '/', label: 'Home', icon: Home },
+  { href: '/about', label: 'About', icon: Info },
+  { href: '/products', label: 'Products', icon: Boxes },
   { href: '/roadmap', label: 'Roadmap', icon: Milestone },
+  { href: '/contact', label: 'Contact', icon: Mail },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ]
