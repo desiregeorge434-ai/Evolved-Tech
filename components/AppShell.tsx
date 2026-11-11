@@ -169,11 +169,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }`}
       >
         <div className="flex h-16 items-center gap-3 border-b border-white/5 px-5">
-          <img src="/logo.png" alt="Evolved Tech" className="h-9 w-9 object-contain" />
-          <div className="leading-tight">
-            <p className="text-sm font-semibold tracking-tight">Evolved Tech</p>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">Studio</p>
-          </div>
+          <span className="relative flex h-9 w-9 items-center justify-center">
+            <span className="absolute inset-0 rounded-full bg-[#00A3FF]/25 blur-md" />
+            <img src="/logo.png" alt="Evolved Tech" className="relative h-9 w-9 object-contain" />
+          </span>
+          <p className="text-sm font-semibold tracking-tight">Evolved Tech</p>
         </div>
 
         <div className="flex flex-1 flex-col pt-4">{nav}</div>
