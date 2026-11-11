@@ -127,14 +127,14 @@ function insideEllipse(x: number, z: number, cx: number, cz: number, rx: number,
 }
 
 const BODIES = [
-  { name: 'MERCURY', radius: 0.55, orbit: 16, speed: 0.20, tilt: 0.02, map: '/mercury.png' },
-  { name: 'VENUS', radius: 1.0, orbit: 22, speed: 0.15, tilt: 0.06, map: '/venus.png' },
-  { name: 'EARTH', radius: 1.55, orbit: 30, speed: 0.10, tilt: 0.41, map: '/earth-day.png' },
-  { name: 'MARS', radius: 0.85, orbit: 38, speed: 0.08, tilt: 0.05, map: '/mars.png' },
-  { name: 'JUPITER', radius: 3.2, orbit: 52, speed: 0.045, tilt: 0.05, map: '/jupiter.jpg' },
-  { name: 'SATURN', radius: 2.6, orbit: 66, speed: 0.032, tilt: 0.47, map: '/saturn.png', ring: true },
-  { name: 'URANUS', radius: 1.7, orbit: 78, speed: 0.022, tilt: 0.97, map: '/uranus.png' },
-  { name: 'NEPTUNE', radius: 1.65, orbit: 90, speed: 0.016, tilt: 0.49, map: '/neptune.png' },
+  { name: 'MERCURY', radius: 1.4, orbit: 52, speed: 0.20, tilt: 0.02, map: '/mercury.png' },
+  { name: 'VENUS', radius: 2.6, orbit: 70, speed: 0.15, tilt: 0.06, map: '/venus.png' },
+  { name: 'EARTH', radius: 5.5, orbit: 95, speed: 0.10, tilt: 0.41, map: '/earth-day.png' },
+  { name: 'MARS', radius: 2.2, orbit: 118, speed: 0.08, tilt: 0.05, map: '/mars.png' },
+  { name: 'JUPITER', radius: 11, orbit: 158, speed: 0.045, tilt: 0.05, map: '/jupiter.jpg' },
+  { name: 'SATURN', radius: 9, orbit: 200, speed: 0.032, tilt: 0.47, map: '/saturn.png', ring: true },
+  { name: 'URANUS', radius: 5.5, orbit: 245, speed: 0.022, tilt: 0.97, map: '/uranus.png' },
+  { name: 'NEPTUNE', radius: 5.2, orbit: 285, speed: 0.016, tilt: 0.49, map: '/neptune.png' },
 ]
 
 export function CinematicIntro({ onComplete }: Props) {
@@ -309,7 +309,7 @@ export function CinematicIntro({ onComplete }: Props) {
     space.add(sunGroup)
 
     const sunMat = track(new THREE.MeshBasicMaterial({ map: loadTex('/sun.jpg'), color: 0xffffff }))
-    const sunCore = new THREE.Mesh(track(new THREE.SphereGeometry(3.6, 64, 64)), sunMat)
+    const sunCore = new THREE.Mesh(track(new THREE.SphereGeometry(14, 64, 64)), sunMat)
     sunGroup.add(sunCore)
 
     const coronaMat = new THREE.ShaderMaterial({
@@ -341,7 +341,7 @@ export function CinematicIntro({ onComplete }: Props) {
       depthWrite: false,
     })
     track(coronaMat)
-    const corona = new THREE.Mesh(track(new THREE.SphereGeometry(4.6, 48, 48)), coronaMat)
+    const corona = new THREE.Mesh(track(new THREE.SphereGeometry(18, 48, 48)), coronaMat)
     sunGroup.add(corona)
 
     const flare = new THREE.Sprite(track(new THREE.SpriteMaterial({
@@ -353,7 +353,7 @@ export function CinematicIntro({ onComplete }: Props) {
       ])),
       blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.9,
     })))
-    flare.scale.setScalar(30)
+    flare.scale.setScalar(120)
     sunGroup.add(flare)
 
     sunGroup.add(new THREE.PointLight(0xfff6e6, 3.6, 0, 0))
@@ -362,7 +362,8 @@ export function CinematicIntro({ onComplete }: Props) {
     type Planet = { mesh: THREE.Mesh; label: THREE.Sprite; angle: number; orbit: number; speed: number; tilt: number; spin: number }
     const planets: Planet[] = []
     let earthMesh: THREE.Mesh | null = null
-    let earthAtmosphere: THREE.ShaderMaterial | null = null
+    let earthHalo: THREE.SpriteMaterial | null = null
+    let earthRadius = 5.5
 
     BODIES.forEach((body, i) => {
       const orbitPts: THREE.Vector3[] = []
@@ -414,41 +415,23 @@ export function CinematicIntro({ onComplete }: Props) {
 
       if (body.name === 'EARTH') {
         earthMesh = mesh
-        const atmoMat = new THREE.ShaderMaterial({
-          uniforms: {
-            uColor: { value: new THREE.Color(0x4aa8ff) },
-            uPower: { value: 3.2 },
-            uIntensity: { value: 1.0 },
-          },
-          vertexShader: `
-            varying vec3 vNormal;
-            varying vec3 vView;
-            void main() {
-              vNormal = normalize(normalMatrix * normal);
-              vec4 mv = modelViewMatrix * vec4(position, 1.0);
-              vView = -mv.xyz;
-              gl_Position = projectionMatrix * mv;
-            }
-          `,
-          fragmentShader: `
-            uniform vec3 uColor;
-            uniform float uPower;
-            uniform float uIntensity;
-            varying vec3 vNormal;
-            varying vec3 vView;
-            void main() {
-              float f = pow(1.0 - abs(dot(normalize(vView), normalize(vNormal))), uPower);
-              gl_FragColor = vec4(uColor * f * uIntensity, f * 0.85);
-            }
-          `,
+        earthRadius = body.radius
+        const haloMat = track(new THREE.SpriteMaterial({
+          map: track(radialTexture([
+            [0, 'rgba(70,150,255,0)'],
+            [0.72, 'rgba(110,190,255,0.5)'],
+            [0.86, 'rgba(90,170,255,0.13)'],
+            [1, 'rgba(60,130,255,0)'],
+          ])),
           transparent: true,
           blending: THREE.AdditiveBlending,
           depthWrite: false,
-          side: THREE.BackSide,
-        })
-        track(atmoMat)
-        earthAtmosphere = atmoMat
-        mesh.add(new THREE.Mesh(track(new THREE.SphereGeometry(body.radius * 1.16, 48, 48)), atmoMat))
+          opacity: 0.6,
+        }))
+        earthHalo = haloMat
+        const halo = new THREE.Sprite(haloMat)
+        halo.scale.setScalar(body.radius * 2.7)
+        mesh.add(halo)
       }
     })
 
@@ -469,7 +452,7 @@ export function CinematicIntro({ onComplete }: Props) {
       const ss = new THREE.Vector3()
       for (let i = 0; i < BELT; i++) {
         const a = Math.random() * Math.PI * 2
-        const r = 44 + Math.random() * 16
+        const r = 128 + Math.random() * 22
         const scl = 0.2 + Math.pow(Math.random(), 2.2) * 1.7
         vv.set(Math.cos(a) * r, (Math.random() - 0.5) * 8, Math.sin(a) * r)
         ee.set(Math.random() * 6.28, Math.random() * 6.28, Math.random() * 6.28)
@@ -483,11 +466,11 @@ export function CinematicIntro({ onComplete }: Props) {
     belt.add(asteroids)
 
     const path = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 16, 135),
-      new THREE.Vector3(34, -10, 96),
-      new THREE.Vector3(-36, 14, 70),
-      new THREE.Vector3(22, 4, 48),
-      new THREE.Vector3(-8, 0, 32),
+      new THREE.Vector3(0, 70, 430),
+      new THREE.Vector3(150, -60, 330),
+      new THREE.Vector3(-170, 70, 250),
+      new THREE.Vector3(90, 20, 170),
+      new THREE.Vector3(-25, 0, 120),
     ])
 
     const T_SPACE = 6.0
@@ -508,7 +491,7 @@ export function CinematicIntro({ onComplete }: Props) {
       const perp = new THREE.Vector3(0.3, 1, 0).cross(camAt.clone().normalize()).normalize()
       const mesh = new THREE.Mesh(rockGeo, rockMat)
       mesh.position.copy(camAt)
-      mesh.scale.setScalar(2.2 + i * 1.4)
+      mesh.scale.setScalar(6 + i * 4)
       space.add(mesh)
       flybys.push({
         mesh,
@@ -737,12 +720,12 @@ export function CinematicIntro({ onComplete }: Props) {
         const eased = Math.pow(k, 2.4)
         cam.position.lerpVectors(approachFrom, approachTo, eased)
         if (earthMesh) desiredTarget.copy(earthMesh.position)
-        const fov = THREE.MathUtils.lerp(55, 30, eased)
+        const fov = THREE.MathUtils.lerp(55, 26, eased)
         if (Math.abs(cam.fov - fov) > 0.01) {
           cam.fov = fov
           cam.updateProjectionMatrix()
         }
-        if (earthAtmosphere) earthAtmosphere.uniforms.uIntensity.value = 1 + eased * 5
+        if (earthHalo) earthHalo.opacity = 0.35 + eased * 0.55
       }
 
       smoothTarget.lerp(desiredTarget, 1 - Math.exp(-4.5 * dt))
@@ -832,7 +815,7 @@ export function CinematicIntro({ onComplete }: Props) {
         approachFrom = camera.position.clone()
         const target = earthMesh ? earthMesh.position.clone() : new THREE.Vector3()
         const dir = approachFrom.clone().sub(target).normalize()
-        approachTo = target.clone().add(dir.multiplyScalar(2.9))
+        approachTo = target.clone().add(dir.multiplyScalar(earthRadius * 1.04))
       })
       .to(state, { approach: 1, duration: T_APPROACH, ease: 'power2.in' })
       .to(flashRef.current, { opacity: 1, duration: 0.5, ease: 'power2.in' }, '-=0.55')
