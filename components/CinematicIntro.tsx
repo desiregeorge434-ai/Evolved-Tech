@@ -500,7 +500,7 @@ export function CinematicIntro({ onComplete }: Props) {
       disposables.forEach((d) => d.dispose())
       renderer.dispose()
       renderer.forceContextLoss()
-      if (renderer.domElement.parentNode === host) host.removeChild(renderer.domElement)
+      if (host && renderer.domElement.parentNode === host) host.removeChild(renderer.domElement)
     }
 
     return cleanup
