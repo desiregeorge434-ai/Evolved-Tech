@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, Boxes, Clock, Activity, Settings as SettingsIcon } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowUpRight, Boxes, Clock, Activity, Settings as SettingsIcon, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 const STATS = [
@@ -12,12 +13,41 @@ const STATS = [
 ]
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [email, setEmail] = useState<string | null>(null)
+  const [checking, setChecking] = useState(true)
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null))
-  }, [])
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) {
+        router.replace('/login?next=/dashboard')
+        return
+      }
+      setEmail(data.user.email ?? null)
+      setChecking(false)
+    })
+
+    const { data } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (!session) {
+        router.replace('/login?next=/dashboard')
+      } else {
+        setEmail(session.user.email ?? null)
+        setChecking(false)
+      }
+    })
+
+    return () => data.subscription.unsubscribe()
+  }, [router])
+
+  if (checking) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <Loader2 size={18} className="animate-spin text-white/30" />
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10 lg:px-10 lg:py-14">
@@ -41,7 +71,7 @@ export default function DashboardPage() {
         {STATS.map((s) => {
           const Icon = s.icon
           return (
-            <div key={s.label} className="rounded-2xl border border-white/8 bg-white/[0.02] p-5">
+            <div key={s.label} className="rounded-2xl border border-white/8 bg-white/[0.02] p-5 backdrop-blur-sm">
               <div className="flex items-center justify-between">
                 <p className="text-xs uppercase tracking-[0.14em] text-white/40">{s.label}</p>
                 <Icon size={15} className="text-[#00A3FF]" />
@@ -54,7 +84,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-6 lg:col-span-2">
+        <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-6 backdrop-blur-sm lg:col-span-2">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">Projects</h2>
             <span className="text-[11px] uppercase tracking-wider text-white/30">3 total</span>
@@ -85,7 +115,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-6">
+        <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-6 backdrop-blur-sm">
           <h2 className="text-sm font-semibold">Quick actions</h2>
           <div className="mt-5 flex flex-col gap-2">
             {['New project', 'Invite teammate', 'View API keys'].map((a) => (

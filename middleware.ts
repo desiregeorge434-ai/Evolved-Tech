@@ -1,7 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PROTECTED = ['/dashboard']
 const AUTH_ROUTES = ['/login', '/register']
 
 export async function middleware(request: NextRequest) {
@@ -31,14 +30,6 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
-
-  if (!user && PROTECTED.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    url.search = ''
-    url.searchParams.set('next', pathname)
-    return NextResponse.redirect(url)
-  }
 
   if (user && AUTH_ROUTES.includes(pathname)) {
     const url = request.nextUrl.clone()
