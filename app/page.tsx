@@ -86,7 +86,7 @@ export default function Home() {
 
         <section className="relative">
           {bgReady && <SpaceBackground quality="low" />}
-          <div className="pointer-events-none absolute inset-0 bg-[#05060a]/62" />
+          <div className="pointer-events-none absolute inset-0 bg-[#05060a]/45" />
 
           <div className="relative mx-auto flex min-h-[92vh] max-w-5xl flex-col items-center justify-center px-6 py-28 text-center lg:px-8">
             <AnimatedLogo />

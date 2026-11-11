@@ -151,11 +151,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="relative min-h-screen text-white">
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0">
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-90"
           style={{ backgroundImage: "url('/milky-way.jpg')" }}
         />
-        <div className="absolute inset-0 bg-[#05060a]/80" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#05060a]/60 via-transparent to-[#05060a]/92" />
+        <div className="absolute inset-0 bg-[#05060a]/45" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#05060a]/35 via-transparent to-[#05060a]/80" />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'radial-gradient(70% 55% at 50% 30%, transparent 30%, rgba(5,6,10,0.55) 100%)',
+          }}
+        />
       </div>
       <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-white/8 bg-[#05060a]/95 px-4 backdrop-blur lg:hidden">
         <Link href="/" className="flex items-center gap-2.5">
