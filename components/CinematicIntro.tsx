@@ -21,10 +21,10 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
 
     const textureLoader = new THREE.TextureLoader()
 
-    const ambientLight = new THREE.AmbientLight(0x333333)
+    const ambientLight = new THREE.AmbientLight(0x222222)
     scene.add(ambientLight)
 
-    const sunGeo = new THREE.SphereGeometry(12, 64, 64)
+    const sunGeo = new THREE.SphereGeometry(8, 64, 64)
     const sunTexture = textureLoader.load('/sun.jpg')
     sunTexture.colorSpace = THREE.SRGBColorSpace
     
@@ -35,21 +35,21 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
       depthWrite: false
     })
     const sun = new THREE.Mesh(sunGeo, sunMat)
-    sun.position.set(-60, 20, -20)
+    sun.position.set(-40, 15, -15)
     scene.add(sun)
 
-    const sunGlowGeo = new THREE.SphereGeometry(15, 32, 32)
-    const sunGlowMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.15, side: THREE.BackSide })
+    const sunGlowGeo = new THREE.SphereGeometry(10, 32, 32)
+    const sunGlowMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.2, side: THREE.BackSide })
     const sunGlow = new THREE.Mesh(sunGlowGeo, sunGlowMat)
     sun.add(sunGlow)
 
-    const sunLight = new THREE.PointLight(0xffffff, 3, 1000)
+    const sunLight = new THREE.PointLight(0xffffff, 4, 2000)
     sunLight.position.copy(sun.position)
     scene.add(sunLight)
 
     const milkyWayTexture = textureLoader.load('/milky-way.jpg')
     milkyWayTexture.colorSpace = THREE.SRGBColorSpace 
-    const skyGeo = new THREE.SphereGeometry(800, 64, 64)
+    const skyGeo = new THREE.SphereGeometry(900, 64, 64)
     const skyMat = new THREE.MeshBasicMaterial({ map: milkyWayTexture, side: THREE.BackSide })
     const sky = new THREE.Mesh(skyGeo, skyMat)
     sky.rotation.x = Math.PI / 4
@@ -66,22 +66,22 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
     scene.add(earth)
 
     const atmosGeo = new THREE.SphereGeometry(2.1, 64, 64)
-    const atmosMat = new THREE.MeshBasicMaterial({ color: 0x00A3FF, transparent: true, opacity: 0.25, side: THREE.BackSide })
+    const atmosMat = new THREE.MeshBasicMaterial({ color: 0x00A3FF, transparent: true, opacity: 0.2, side: THREE.BackSide })
     earth.add(new THREE.Mesh(atmosGeo, atmosMat))
 
     const jupiterGeo = new THREE.SphereGeometry(3.5, 64, 64)
-    const jupiterMat = new THREE.MeshStandardMaterial({ map: textureLoader.load('/jupiter.png'), roughness: 0.8 })
+    const jupiterMat = new THREE.MeshStandardMaterial({ map: textureLoader.load('/jupiter.jpg'), roughness: 0.8 })
     const jupiter = new THREE.Mesh(jupiterGeo, jupiterMat)
-    jupiter.position.set(35, 5, 15)
+    jupiter.position.set(25, 2, 8)
     scene.add(jupiter)
 
     const marsGeo = new THREE.SphereGeometry(1.2, 64, 64)
     const marsMat = new THREE.MeshStandardMaterial({ map: textureLoader.load('/mars.png'), roughness: 0.8 })
     const mars = new THREE.Mesh(marsGeo, marsMat)
-    mars.position.set(18, -3, 8)
+    mars.position.set(12, -1, 4)
     scene.add(mars)
 
-    camera.position.set(50, 12, 30)
+    camera.position.set(35, 8, 20)
     camera.lookAt(0, 0, 0)
 
     const tl = gsap.timeline({
@@ -92,7 +92,7 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
 
     tl.to(camera.position, { 
       x: 0, y: 0, z: 4.5, 
-      duration: 9, 
+      duration: 8, 
       ease: "power2.inOut" 
     })
     .to("#lagos-text", { opacity: 1, duration: 0.5 }, "-=1.5")
@@ -108,8 +108,8 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
       jupiter.rotation.y += 0.01
       mars.rotation.y += 0.008
 
-      jupiter.position.x = 35 + Math.sin(time * 0.2) * 2
-      mars.position.x = 18 + Math.cos(time * 0.3) * 1
+      jupiter.position.x = 25 + Math.sin(time * 0.2) * 1.5
+      mars.position.x = 12 + Math.cos(time * 0.3) * 1
 
       sunGlow.scale.setScalar(1 + Math.sin(time * 2) * 0.05)
 
