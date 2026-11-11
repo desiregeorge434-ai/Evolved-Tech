@@ -24,18 +24,39 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
     const sunLight = new THREE.PointLight(0xffffff, 5, 2000)
     scene.add(sunLight)
 
+    // 1. THE SUN (Real 3D Sphere, not a flat sprite)
+    const sunGeo = new THREE.SphereGeometry(6, 64, 64)
     const sunTexture = new THREE.TextureLoader().load('/sun.png')
-    const sunMat = new THREE.SpriteMaterial({ map: sunTexture, blending: THREE.AdditiveBlending, transparent: true })
-    const sun = new THREE.Sprite(sunMat)
-    sun.scale.set(20, 20, 1)
+    sunTexture.colorSpace = THREE.SRGBColorSpace
+    
+    const sunMat = new THREE.MeshBasicMaterial({ 
+      map: sunTexture,
+      blending: THREE.AdditiveBlending, 
+      transparent: true,
+      depthWrite: false
+    })
+    const sun = new THREE.Mesh(sunGeo, sunMat)
     scene.add(sun)
 
+    // 2. SUN GLOW (A larger, soft halo around the sun)
+    const glowGeo = new THREE.SphereGeometry(8, 32, 32)
+    const glowMat = new THREE.MeshBasicMaterial({ 
+      color: 0xff8800, 
+      transparent: true, 
+      opacity: 0.15, 
+      side: THREE.BackSide 
+    })
+    const glow = new THREE.Mesh(glowGeo, glowMat)
+    sun.add(glow)
+
+    // 3. MILKY WAY BACKGROUND
     const skyTexture = new THREE.TextureLoader().load('/milky-way.jpg')
     const skyGeo = new THREE.SphereGeometry(900, 32, 32)
     const skyMat = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide })
     const sky = new THREE.Mesh(skyGeo, skyMat)
     scene.add(sky)
 
+    // 4. PLANETS
     const planets: any[] = []
     const createPlanet = (path: string, size: number, distance: number, speed: number, angle: number) => {
       const geo = new THREE.SphereGeometry(size, 32, 32)
@@ -55,7 +76,7 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
     createPlanet('/uranus.png', 1.8, 48, 0.01, 0)
     createPlanet('/neptune.png', 1.7, 58, 0.008, Math.PI * 1.2)
 
-    // Start far away and high up
+    // 5. CAMERA START
     camera.position.set(-40, 50, 60)
     camera.lookAt(0, 0, 0)
 
@@ -66,6 +87,11 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
       animationId = requestAnimationFrame(animate)
       const time = clock.getElapsedTime()
 
+      // Rotate the Sun and make it pulse slightly
+      sun.rotation.y += 0.002
+      glow.scale.setScalar(1 + Math.sin(time * 2) * 0.02)
+
+      // Orbit planets
       planets.forEach(p => {
         p.mesh.rotation.y += 0.01
         const currentAngle = p.angle + (time * p.speed)
@@ -77,25 +103,23 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
     }
     animate()
 
+    // 6. CINEMATIC SWEEP
     const tl = gsap.timeline({
       onComplete: () => {
         gsap.to(sceneRef.current, { opacity: 0, duration: 1, onComplete: onComplete })
       }
     })
 
-    // 1. Swoop down into the orbital plane and fly past the planets
     tl.to(camera.position, {
       x: 0, y: 0, z: 10,
       duration: 6,
       ease: "power2.inOut"
     })
-    // 2. Lock onto Earth and spin in
     .to(camera.position, {
       x: 0, y: 0, z: 2.1,
       duration: 2,
       ease: "power4.in"
     })
-    // 3. Reveal Logo
     .to(logoRef.current, {
       opacity: 1,
       scale: 1,
