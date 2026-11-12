@@ -43,9 +43,15 @@ export function detectDevice(): DeviceProfile {
   const cores = nav.hardwareConcurrency ?? 4
   const memory = nav.deviceMemory ?? 4
   const dpr = window.devicePixelRatio || 1
-  const small = Math.min(window.innerWidth, window.innerHeight) < 700
+  const minSide = Math.min(window.innerWidth, window.innerHeight)
+  const small = minSide < 640
 
   const profile = { ...base, cores, memory, dpr, small }
+
+  const forced = new URLSearchParams(window.location.search).get('quality')
+  if (forced === 'full' || forced === 'low' || forced === 'off') {
+    return { ...profile, tier: forced as Tier, reason: 'url-override' }
+  }
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     return { ...profile, tier: 'off', reason: 'reduced-motion' }
@@ -61,14 +67,16 @@ export function detectDevice(): DeviceProfile {
 
   const effective = nav.connection?.effectiveType ?? ''
   const slowNetwork = /(^|-)2g/.test(effective)
+  const weakCpu = cores <= 2
+  const weakMemory = memory <= 2
 
-  if (memory <= 2 || cores <= 2 || small || slowNetwork) {
+  if (small || (weakCpu && weakMemory) || slowNetwork) {
     return {
       ...profile,
       tier: 'low',
-      reason: `mem=${memory} cores=${cores} small=${small} net=${effective || 'unknown'}`,
+      reason: `small=${small} cores=${cores} mem=${memory} net=${effective || 'unknown'}`,
     }
   }
 
-  return { ...profile, tier: 'full', reason: 'capable' }
+  return { ...profile, tier: 'full', reason: `cores=${cores} mem=${memory} dpr=${dpr}` }
 }
