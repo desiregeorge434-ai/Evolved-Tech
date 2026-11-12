@@ -1,13 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { User, Building2, KeyRound, Check } from 'lucide-react'
+import { User, Building2, Check } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'workspace', label: 'Workspace', icon: Building2 },
-  { id: 'keys', label: 'API keys', icon: KeyRound },
 ] as const
 
 type TabId = (typeof TABS)[number]['id']
@@ -91,26 +90,6 @@ export default function SettingsPage() {
                   defaultValue="Browser-first tools for people who make games. Home of Limn Engine."
                   className="w-full resize-none rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition-colors focus:border-[#00A3FF]/60"
                 />
-              </div>
-            </div>
-          )}
-
-          {tab === 'keys' && (
-            <div className="space-y-4">
-              <p className="text-xs leading-relaxed text-white/40">
-                Publishable keys are safe to expose in the browser. Secret keys must never be committed.
-              </p>
-              <div className="rounded-xl border border-white/10 bg-black/40 px-4 py-3">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-white/30">Publishable key</p>
-                <p className="mt-1.5 truncate font-mono text-xs text-white/70">
-                  sb_publishable_••••••••••••••••
-                </p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-black/40 px-4 py-3">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-white/30">Engine endpoint</p>
-                <p className="mt-1.5 truncate font-mono text-xs text-white/70">
-                  https://kodgndiinlefiokyzjol.supabase.co
-                </p>
               </div>
             </div>
           )}
