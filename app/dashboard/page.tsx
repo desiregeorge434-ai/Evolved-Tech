@@ -11,15 +11,17 @@ import {
   MessageSquare,
   Settings as SettingsIcon,
   Loader2,
+  Plus,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { loadLimnOverview, arcadeUrl, type LimnOverview } from '@/lib/limn'
+import { loadLimnOverview, loadMyGames, arcadeUrl, type LimnOverview, type MyGame } from '@/lib/limn'
 
 export default function DashboardPage() {
   const router = useRouter()
   const [email, setEmail] = useState<string | null>(null)
   const [checking, setChecking] = useState(true)
   const [data, setData] = useState<LimnOverview | null>(null)
+  const [mine, setMine] = useState<MyGame[] | null>(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -30,8 +32,10 @@ export default function DashboardPage() {
         router.replace('/login?next=/dashboard')
         return
       }
-      setEmail(auth.user.email ?? null)
+      const mail = auth.user.email ?? null
+      setEmail(mail)
       setChecking(false)
+      if (mail) loadMyGames(mail).then(setMine).catch(() => setMine([]))
     })
 
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -78,9 +82,6 @@ export default function DashboardPage() {
           <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">
             {email ? `Welcome back, ${email.split('@')[0]}` : 'Welcome back'}
           </h1>
-          <p className="mt-2 text-sm text-white/40">
-            Live activity from Limn Engine — the engine you signed in to.
-          </p>
         </div>
         <Link
           href="/dashboard/settings"
@@ -111,27 +112,45 @@ export default function DashboardPage() {
       <div className="mt-8 grid gap-4 lg:grid-cols-3">
         <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-6 backdrop-blur-sm lg:col-span-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Recently published</h2>
+            <div>
+              <h2 className="text-sm font-semibold">Your games</h2>
+              <p className="mt-0.5 text-[11px] text-white/35">
+                Published on Limn Engine with {email ?? 'this account'}
+              </p>
+            </div>
             <a
-              href={arcadeUrl()}
+              href="https://limn-engine-doc.vercel.app/editor/"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] text-[#00A3FF] hover:underline"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-[11px] text-white/60 transition-colors hover:bg-white/5 hover:text-white"
             >
-              Open arcade <ArrowUpRight size={12} />
+              <Plus size={12} />
+              New game
             </a>
           </div>
 
           <div className="mt-5 divide-y divide-white/5">
-            {!data && !failed && (
-              <p className="py-6 text-xs text-white/30">Loading activity…</p>
+            {mine === null && <p className="py-6 text-xs text-white/30">Looking for your games…</p>}
+
+            {mine?.length === 0 && (
+              <div className="py-8 text-center">
+                <Gamepad2 size={20} className="mx-auto text-white/15" />
+                <p className="mt-3 text-sm text-white/50">Nothing published under this email yet.</p>
+                <p className="mt-1 text-xs text-white/30">
+                  Games you publish with this address will appear here automatically.
+                </p>
+                <a
+                  href="https://limn-engine-doc.vercel.app/editor/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-[#00A3FF] hover:underline"
+                >
+                  Build your first one <ArrowUpRight size={12} />
+                </a>
+              </div>
             )}
-            {failed && (
-              <p className="py-6 text-xs text-red-300/70">
-                Could not reach Limn Engine. Check the project connection.
-              </p>
-            )}
-            {data?.recent.map((g) => (
+
+            {mine?.map((g) => (
               <a
                 key={g.slug}
                 href={arcadeUrl(g.slug)}
@@ -143,14 +162,14 @@ export default function DashboardPage() {
                   <p className="truncate text-sm font-medium text-white/85 group-hover:text-white">{g.title}</p>
                   <p className="mt-0.5 font-mono text-[10px] text-white/30">/{g.slug}</p>
                 </div>
-                <time className="ml-4 shrink-0 text-[10px] uppercase tracking-wider text-white/25">
-                  {new Date(g.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                </time>
+                <div className="ml-4 flex shrink-0 items-center gap-4">
+                  <span className="text-[10px] uppercase tracking-wider text-white/25">
+                    {g.plays} plays
+                  </span>
+                  <ArrowUpRight size={13} className="text-white/20 group-hover:text-[#00A3FF]" />
+                </div>
               </a>
             ))}
-            {data && data.recent.length === 0 && !failed && (
-              <p className="py-6 text-xs text-white/30">No games published yet.</p>
-            )}
           </div>
         </div>
 
@@ -175,6 +194,42 @@ export default function DashboardPage() {
               </a>
             ))}
           </div>
+        </div>
+      </div>
+
+      <div className="mt-8 rounded-2xl border border-white/8 bg-white/[0.02] p-6 backdrop-blur-sm">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Recently on Limn</h2>
+          <a
+            href={arcadeUrl()}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-[11px] text-[#00A3FF] hover:underline"
+          >
+            Open arcade <ArrowUpRight size={12} />
+          </a>
+        </div>
+
+        <div className="mt-5 divide-y divide-white/5">
+          {!data && !failed && <p className="py-6 text-xs text-white/30">Loading activity…</p>}
+          {failed && <p className="py-6 text-xs text-red-300/70">Could not reach Limn Engine.</p>}
+          {data?.recent.map((g) => (
+            <a
+              key={g.slug}
+              href={arcadeUrl(g.slug)}
+              target="_blank"
+              rel="noreferrer"
+              className="group flex items-center justify-between py-3.5"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm text-white/75 group-hover:text-white">{g.title}</p>
+                <p className="mt-0.5 font-mono text-[10px] text-white/25">/{g.slug}</p>
+              </div>
+              <time className="ml-4 shrink-0 text-[10px] uppercase tracking-wider text-white/25">
+                {new Date(g.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              </time>
+            </a>
+          ))}
         </div>
       </div>
     </div>

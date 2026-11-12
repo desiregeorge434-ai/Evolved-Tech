@@ -62,3 +62,24 @@ export function arcadeUrl(slug?: string): string {
     ? `https://limn-engine-doc.vercel.app/arcade/game.html?slug=${encodeURIComponent(slug)}`
     : 'https://limn-engine-doc.vercel.app/arcade/'
 }
+
+export type MyGame = {
+  slug: string
+  title: string
+  plays: number
+  created_at: string
+}
+
+export async function loadMyGames(email: string): Promise<MyGame[]> {
+  if (!email) return []
+  try {
+    const res = await fetch(
+      `${LIMN_URL}/rest/v1/games?select=slug,title,plays,created_at&author_name=eq.${encodeURIComponent(email)}&order=created_at.desc&limit=50`,
+      { headers }
+    )
+    if (!res.ok) return []
+    return await res.json()
+  } catch {
+    return []
+  }
+}
