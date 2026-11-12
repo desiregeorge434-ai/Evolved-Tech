@@ -7,6 +7,7 @@ import { CinematicIntro } from '@/components/CinematicIntro'
 import { AnimatedLogo } from '@/components/AnimatedLogo'
 import { SpaceBackground } from '@/components/SpaceBackground'
 import { detectDevice, type Tier } from '@/lib/device-tier'
+import { LogoIntro } from '@/components/LogoIntro'
 
 const STAGES = [
   {
@@ -71,7 +72,10 @@ export default function Home() {
 
   return (
     <>
-      {showIntro && <CinematicIntro onComplete={handleIntroComplete} quality={tier === 'full' ? 'full' : 'low'} />}
+      {showIntro && tier === 'full' && (
+        <CinematicIntro onComplete={handleIntroComplete} quality="full" />
+      )}
+      {showIntro && tier === 'low' && <LogoIntro onComplete={handleIntroComplete} />}
 
       <div className="relative overflow-hidden">
         <style>{CSS}</style>
