@@ -3,7 +3,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ArrowRight, Loader2, Mail, Lock, User, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Loader2, Mail, Lock, User, CheckCircle2, Gamepad2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { AuthPanel } from '@/components/AuthPanel'
 import { GoogleButton } from '@/components/GoogleButton'
@@ -100,9 +100,28 @@ export default function RegisterPage() {
         </>
       }
     >
+      <a
+        href="https://limn-engine-doc.vercel.app/arcade/"
+        target="_blank"
+        rel="noreferrer"
+        className="flex w-full items-center justify-center gap-3 rounded-xl bg-[#00A3FF] px-6 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[#0089d6]"
+      >
+        <Gamepad2 size={16} />
+        Continue with Limn
+      </a>
+      <p className="mt-2 text-center text-[10px] leading-relaxed text-white/30">
+        One account for Evolved Tech and the arcade.
+      </p>
+
+      <div className="my-5 flex items-center gap-4">
+        <span className="h-px flex-1 bg-white/[0.08]" />
+        <span className="text-[10px] uppercase tracking-[0.2em] text-white/25">or</span>
+        <span className="h-px flex-1 bg-white/[0.08]" />
+      </div>
+
       <GoogleButton label="Sign up with Google" />
 
-      <div className="my-6 flex items-center gap-4">
+      <div className="my-5 flex items-center gap-4">
         <span className="h-px flex-1 bg-white/[0.08]" />
         <span className="text-[10px] uppercase tracking-[0.2em] text-white/25">or</span>
         <span className="h-px flex-1 bg-white/[0.08]" />

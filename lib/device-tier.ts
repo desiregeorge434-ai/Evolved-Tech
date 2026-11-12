@@ -67,10 +67,8 @@ export function detectDevice(): DeviceProfile {
 
   const effective = nav.connection?.effectiveType ?? ''
   const slowNetwork = /(^|-)2g/.test(effective)
-  const weakCpu = cores <= 2
-  const weakMemory = memory <= 2
 
-  if (small || (weakCpu && weakMemory) || slowNetwork) {
+  if (small || slowNetwork) {
     return {
       ...profile,
       tier: 'low',
