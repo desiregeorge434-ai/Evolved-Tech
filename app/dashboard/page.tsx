@@ -102,7 +102,7 @@ export default function DashboardPage() {
                 <Icon size={15} className="text-[#00A3FF]" />
               </div>
               <p className="mt-4 text-2xl font-semibold tabular-nums">
-                {failed ? '—' : s.value === undefined ? '···' : s.value.toLocaleString()}
+                {failed ? '-' : s.value === undefined ? '···' : s.value.toLocaleString()}
               </p>
             </div>
           )
@@ -130,7 +130,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-5 divide-y divide-white/5">
-            {mine === null && <p className="py-6 text-xs text-white/30">Looking for your games…</p>}
+            {mine === null && <p className="py-6 text-xs text-white/30">Looking for your games...</p>}
 
             {mine?.length === 0 && (
               <div className="py-7">
@@ -148,7 +148,7 @@ export default function DashboardPage() {
 
                 <ol className="mt-5 space-y-2.5">
                   {[
-                    'Open the editor � it runs in the browser, no install',
+                    'Open the editor - it runs in the browser, no install',
                     'Build with Limn Engine, using the templates if you want a start',
                     'Publish, and the game appears here automatically',
                   ].map((step, i) => (
@@ -234,7 +234,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="mt-5 divide-y divide-white/5">
-          {!data && !failed && <p className="py-6 text-xs text-white/30">Loading activity…</p>}
+          {!data && !failed && <p className="py-6 text-xs text-white/30">Loading activity...</p>}
           {failed && <p className="py-6 text-xs text-red-300/70">Could not reach Limn Engine.</p>}
           {data?.recent.map((g) => (
             <a
