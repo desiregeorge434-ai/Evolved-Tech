@@ -133,19 +133,42 @@ export default function DashboardPage() {
             {mine === null && <p className="py-6 text-xs text-white/30">Looking for your gamesâ€¦</p>}
 
             {mine?.length === 0 && (
-              <div className="py-8 text-center">
-                <Gamepad2 size={20} className="mx-auto text-white/15" />
-                <p className="mt-3 text-sm text-white/50">Nothing published under this email yet.</p>
-                <p className="mt-1 text-xs text-white/30">
-                  Games you publish with this address will appear here automatically.
-                </p>
+              <div className="py-7">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#00A3FF]/10">
+                    <Gamepad2 size={16} className="text-[#00A3FF]" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-white/80">No games yet</p>
+                    <p className="text-[11px] text-white/35">
+                      Nothing is published under {email ?? 'this address'}.
+                    </p>
+                  </div>
+                </div>
+
+                <ol className="mt-5 space-y-2.5">
+                  {[
+                    'Open the editor — it runs in the browser, no install',
+                    'Build with Limn Engine, using the templates if you want a start',
+                    'Publish, and the game appears here automatically',
+                  ].map((step, i) => (
+                    <li key={step} className="flex gap-3 text-xs leading-relaxed text-white/45">
+                      <span className="mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/8 text-[9px] text-white/50">
+                        {i + 1}
+                      </span>
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+
                 <a
                   href="https://limn-engine-doc.vercel.app/editor/"
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-[#00A3FF] hover:underline"
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#00A3FF] px-5 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#0089d6]"
                 >
-                  Build your first one <ArrowUpRight size={12} />
+                  Open the editor
+                  <ArrowUpRight size={13} />
                 </a>
               </div>
             )}
