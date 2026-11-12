@@ -8,7 +8,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 
-type Props = { onComplete: () => void }
+type Props = { onComplete: () => void; quality?: 'full' | 'low' }
 
 const BLUE = 0x00a3ff
 const TAGLINE = 'THE POWER OF MAKING GAMES'
@@ -163,7 +163,7 @@ const BODIES = [
   { name: 'NEPTUNE', radius: 8, orbit: 320, speed: 0.016, tilt: 0.49, map: '/neptune.png' },
 ]
 
-export function CinematicIntro({ onComplete }: Props) {
+export function CinematicIntro({ onComplete, quality = 'full' }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const flashRef = useRef<HTMLDivElement>(null)
   const blackRef = useRef<HTMLDivElement>(null)
@@ -201,8 +201,9 @@ export function CinematicIntro({ onComplete }: Props) {
     }
 
     const isSmall = window.innerWidth < 820
-    const useBloom = !isSmall
-    const pixelRatio = Math.min(window.devicePixelRatio, isSmall ? 1.2 : 1.35)
+    const full = quality === 'full' && !isSmall
+    const useBloom = full
+    const pixelRatio = Math.min(window.devicePixelRatio, full ? 1.4 : 1)
 
     renderer.setPixelRatio(pixelRatio)
     renderer.setSize(window.innerWidth, window.innerHeight)
@@ -385,7 +386,7 @@ export function CinematicIntro({ onComplete }: Props) {
 
       const geo = track(new THREE.SphereGeometry(body.radius, body.radius > 4 ? 96 : 64, body.radius > 4 ? 96 : 64))
       const mat = track(new THREE.MeshStandardMaterial({
-        map: loadTex(body.map), roughness: 0.92, metalness: 0.02,
+        map: full ? loadTex(body.map) : null, color: full ? 0xffffff : 0x93a3b5, roughness: 0.92, metalness: 0.02,
       }))
       const mesh = new THREE.Mesh(geo, mat)
       mesh.rotation.z = body.tilt
@@ -447,7 +448,7 @@ export function CinematicIntro({ onComplete }: Props) {
 
     const belt = new THREE.Group()
     space.add(belt)
-    const BELT = isSmall ? 70 : 140
+    const BELT = full ? 140 : 40
     const asteroids = new THREE.InstancedMesh(rockGeo, rockMat, BELT)
     {
       const mm = new THREE.Matrix4()
@@ -673,10 +674,24 @@ export function CinematicIntro({ onComplete }: Props) {
       gridCeiling.position.z = (t * 3) % 40
     }
 
+    let frames = 0
+    let watchStart = 0
+
     const tick = () => {
       raf = requestAnimationFrame(tick)
       if (document.hidden) return
       const t = clock.getElapsedTime()
+
+      frames++
+      if (watchStart === 0) watchStart = t
+      if (watchStart > 0 && t - watchStart > 2.5) {
+        const fps = frames / (t - watchStart)
+        if (fps < 20) {
+          finish()
+          return
+        }
+        watchStart = -1
+      }
 
       if (state.phase === 'world') {
         renderWorld(t)

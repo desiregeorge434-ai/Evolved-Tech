@@ -6,6 +6,7 @@ import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import { CinematicIntro } from '@/components/CinematicIntro'
 import { AnimatedLogo } from '@/components/AnimatedLogo'
 import { SpaceBackground } from '@/components/SpaceBackground'
+import { detectDevice, type Tier } from '@/lib/device-tier'
 
 const STAGES = [
   {
@@ -45,13 +46,18 @@ export default function Home() {
   const [showIntro, setShowIntro] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [bgReady, setBgReady] = useState(false)
+  const [tier, setTier] = useState<Tier>('full')
 
   useEffect(() => {
     setMounted(true)
-    if (!sessionStorage.getItem('hasSeenIntro')) {
-      setShowIntro(true)
+    const profile = detectDevice()
+    setTier(profile.tier)
+
+    const seen = sessionStorage.getItem('hasSeenIntro')
+    if (profile.tier === 'off' || seen) {
+      setBgReady(profile.tier === 'full')
     } else {
-      setBgReady(true)
+      setShowIntro(true)
     }
   }, [])
 
@@ -65,7 +71,7 @@ export default function Home() {
 
   return (
     <>
-      {showIntro && <CinematicIntro onComplete={handleIntroComplete} />}
+      {showIntro && <CinematicIntro onComplete={handleIntroComplete} quality={tier === 'full' ? 'full' : 'low'} />}
 
       <div className="relative overflow-hidden">
         <style>{CSS}</style>
@@ -85,7 +91,7 @@ export default function Home() {
         />
 
         <section className="relative">
-          {bgReady && <SpaceBackground quality="low" />}
+          {bgReady && tier === 'full' && <SpaceBackground quality="low" />}
           <div className="pointer-events-none absolute inset-0 bg-[#05060a]/45" />
 
           <div className="relative mx-auto flex min-h-[92vh] max-w-5xl flex-col items-center justify-center px-6 py-28 text-center lg:px-8">
