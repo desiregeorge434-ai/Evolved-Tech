@@ -1,12 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { User, Building2, Check } from 'lucide-react'
+import { User, Building2, Check, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import {
+  getProfile,
+  updateProfile,
+  type Profile,
+  type ProfileUpdate,
+} from '@/lib/supabase/profile'
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
-  { id: 'workspace', label: 'Workspace', icon: Building2 },
+  { id: 'account', label: 'Account', icon: Building2 },
 ] as const
 
 type TabId = (typeof TABS)[number]['id']
@@ -14,25 +20,73 @@ type TabId = (typeof TABS)[number]['id']
 export default function SettingsPage() {
   const [tab, setTab] = useState<TabId>('profile')
   const [email, setEmail] = useState('')
+  const [userId, setUserId] = useState<string | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const [form, setForm] = useState<ProfileUpdate>({})
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ''))
+    supabase.auth.getUser().then(async ({ data: auth }) => {
+      if (!auth.user) {
+        setLoading(false)
+        return
+      }
+      setEmail(auth.user.email ?? '')
+      setUserId(auth.user.id)
+      const p = await getProfile(supabase, auth.user.id)
+      setProfile(p)
+      setForm({
+        full_name: p?.full_name ?? '',
+        username: p?.username ?? '',
+        bio: p?.bio ?? '',
+        role: p?.role ?? '',
+      })
+      setLoading(false)
+    })
   }, [])
 
-  const save = () => {
+  const field = (key: keyof ProfileUpdate) => ({
+    value: form[key] ?? '',
+    onChange: (v: string) => setForm((f) => ({ ...f, [key]: v })),
+  })
+
+  const save = async () => {
+    if (!userId) return
+    setSaving(true)
+    setError(null)
+
+    const supabase = createClient()
+    const result = await updateProfile(supabase, userId, form)
+
+    setSaving(false)
+    if (!result.ok) {
+      setError(result.error)
+      return
+    }
     setSaved(true)
     setTimeout(() => setSaved(false), 1800)
+    const fresh = await getProfile(supabase, userId)
+    setProfile(fresh)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <Loader2 size={18} className="animate-spin text-white/30" />
+      </div>
+    )
   }
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-10 lg:px-10 lg:py-14">
       <p className="text-[11px] uppercase tracking-[0.22em] text-white/40">Settings</p>
-      <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Your workspace</h1>
-      <p className="mt-2 text-sm text-white/45">
-        Manage your account, studio details and engine credentials.
-      </p>
+      <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Your account</h1>
+      <p className="mt-2 text-sm text-white/45">Manage your profile and account details.</p>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[200px_1fr]">
         <div className="flex gap-1 overflow-x-auto lg:flex-col">
@@ -59,50 +113,74 @@ export default function SettingsPage() {
             <div className="space-y-6">
               <div className="flex items-center gap-4">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#00A3FF]/12 text-2xl font-bold text-[#00A3FF]">
-                  {email ? email[0].toUpperCase() : 'E'}
+                  {(profile?.full_name?.[0] ?? profile?.username?.[0] ?? email?.[0] ?? 'E').toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-sm font-medium">{email || 'Not signed in'}</p>
-                  <p className="mt-1 text-xs text-white/35">Member since 2026</p>
+                  <p className="text-sm font-medium">
+                    {profile?.full_name || profile?.username || email}
+                  </p>
+                  <p className="mt-1 text-xs text-white/35">
+                    {profile?.is_verified ? 'Verified' : 'Member'} since{' '}
+                    {profile?.created_at
+                      ? new Date(profile.created_at).toLocaleDateString(undefined, {
+                          month: 'long',
+                          year: 'numeric',
+                        })
+                      : '—'}
+                  </p>
                 </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Display name" defaultValue="Desire George" />
-                <Field label="Email" defaultValue={email} />
-                <Field label="Role" defaultValue="Owner" />
-                <Field label="Location" defaultValue="Lagos, Nigeria" />
+                <Field label="Full name" {...field('full_name')} />
+                <Field label="Username" {...field('username')} />
+                <Field label="Role" {...field('role')} />
+                <Field label="Email" defaultValue={email} disabled />
               </div>
-            </div>
-          )}
 
-          {tab === 'workspace' && (
-            <div className="space-y-4">
-              <Field label="Studio name" defaultValue="Evolved Tech" />
-              <Field label="Workspace slug" defaultValue="evolved-tech" />
-              <Field label="Website" defaultValue="evolved-tech.vercel.app" />
               <div>
                 <label className="mb-2 block text-xs uppercase tracking-[0.14em] text-white/40">
-                  About
+                  Bio
                 </label>
                 <textarea
                   rows={4}
-                  defaultValue="Browser-first tools for people who make games. Home of Limn Engine."
+                  value={form.bio ?? ''}
+                  onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))}
                   className="w-full resize-none rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition-colors focus:border-[#00A3FF]/60"
                 />
               </div>
             </div>
           )}
 
+          {tab === 'account' && (
+            <div className="space-y-4">
+              <Field label="Email" defaultValue={email} disabled />
+              <Field label="User ID" defaultValue={userId ?? ''} disabled />
+              <p className="pt-2 text-xs leading-relaxed text-white/35">
+                Email and user ID are managed by authentication. Changing your email requires a
+                confirmation link — that flow lands in a later phase.
+              </p>
+            </div>
+          )}
+
+          {error && (
+            <p className="mt-6 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs text-red-300">
+              {error}
+            </p>
+          )}
+
           <div className="mt-8 flex items-center gap-3 border-t border-white/5 pt-6">
             <button
               onClick={save}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#00A3FF] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0089d6]"
+              disabled={saving || tab !== 'profile'}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#00A3FF] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0089d6] disabled:opacity-60"
             >
-              {saved ? <Check size={15} /> : null}
-              {saved ? 'Saved' : 'Save changes'}
+              {saving ? <Loader2 size={15} className="animate-spin" /> : saved ? <Check size={15} /> : null}
+              {saving ? 'Saving' : saved ? 'Saved' : 'Save changes'}
             </button>
-            <span className="text-xs text-white/30">Changes apply to this workspace only.</span>
+            <span className="text-xs text-white/30">
+              {tab === 'profile' ? 'Changes save to your profile.' : 'Read-only.'}
+            </span>
           </div>
         </div>
       </div>
@@ -110,13 +188,28 @@ export default function SettingsPage() {
   )
 }
 
-function Field({ label, defaultValue }: { label: string; defaultValue?: string }) {
+function Field({
+  label,
+  value,
+  onChange,
+  defaultValue,
+  disabled,
+}: {
+  label: string
+  value?: string
+  onChange?: (v: string) => void
+  defaultValue?: string
+  disabled?: boolean
+}) {
   return (
     <div>
       <label className="mb-2 block text-xs uppercase tracking-[0.14em] text-white/40">{label}</label>
       <input
+        value={value}
         defaultValue={defaultValue}
-        className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white outline-none transition-colors focus:border-[#00A3FF]/60"
+        onChange={onChange ? (e) => onChange(e.target.value) : undefined}
+        disabled={disabled}
+        className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white outline-none transition-colors focus:border-[#00A3FF]/60 disabled:opacity-50"
       />
     </div>
   )
