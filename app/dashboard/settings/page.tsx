@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { User, Building2, Check, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -18,6 +19,7 @@ const TABS = [
 type TabId = (typeof TABS)[number]['id']
 
 export default function SettingsPage() {
+  const router = useRouter()
   const [tab, setTab] = useState<TabId>('profile')
   const [email, setEmail] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
@@ -33,7 +35,7 @@ export default function SettingsPage() {
     const supabase = createClient()
     supabase.auth.getUser().then(async ({ data: auth }) => {
       if (!auth.user) {
-        setLoading(false)
+        router.replace('/login?next=/dashboard/settings')
         return
       }
       setEmail(auth.user.email ?? '')
@@ -48,7 +50,7 @@ export default function SettingsPage() {
       })
       setLoading(false)
     })
-  }, [])
+  }, [router])
 
   const field = (key: keyof ProfileUpdate) => ({
     value: form[key] ?? '',
@@ -157,8 +159,7 @@ export default function SettingsPage() {
               <Field label="Email" defaultValue={email} disabled />
               <Field label="User ID" defaultValue={userId ?? ''} disabled />
               <p className="pt-2 text-xs leading-relaxed text-white/35">
-                Email and user ID are managed by authentication. Changing your email requires a
-                confirmation link — that flow lands in a later phase.
+                Email and user ID are managed by authentication.
               </p>
             </div>
           )}
