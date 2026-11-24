@@ -44,7 +44,9 @@ export default function LoginPage() {
       return
     }
 
-    window.location.assign(next)
+    // FORCE redirect to the current Evolved Tech domain, not Limn Engine
+    const targetUrl = next.startsWith('http') ? next : `${window.location.origin}${next}`
+    window.location.assign(targetUrl)
   }
 
   const resend = async () => {
