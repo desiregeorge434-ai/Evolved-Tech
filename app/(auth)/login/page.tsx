@@ -2,12 +2,14 @@
 
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Loader2, Mail, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { AuthPanel } from '@/components/AuthPanel'
 import { GoogleButton } from '@/components/GoogleButton'
 
 export default function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -44,9 +46,9 @@ export default function LoginPage() {
       return
     }
 
-    // FORCE redirect to the current Evolved Tech domain, not Limn Engine
-    const targetUrl = next.startsWith('http') ? next : `${window.location.origin}${next}`
-    window.location.assign(targetUrl)
+    // Use Next.js router instead of window.location
+    router.push(next)
+    router.refresh()
   }
 
   const resend = async () => {
