@@ -18,20 +18,13 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id']
 
-type LimnProfileData = {
-  username: string
-  display_name: string
-  avatar_url: string
-  bio: string
-}
-
 export default function SettingsPage() {
   const router = useRouter()
   const [tab, setTab] = useState<TabId>('profile')
   const [email, setEmail] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [limnData, setLimnData] = useState<LimnProfileData | null>(null)
+  const [limnData, setLimnData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -56,13 +49,12 @@ export default function SettingsPage() {
         full_name: p?.full_name ?? '',
         username: p?.username ?? '',
         bio: p?.bio ?? '',
-        // We do not include role here because users shouldn't edit it
       })
 
       if (userEmail) {
         const { data, error: rpcError } = await supabase.rpc('get_limn_profile', { user_email: userEmail })
         if (!rpcError && data && data.length > 0) {
-          setLimnData(data[0] as LimnProfileData)
+          setLimnData(data[0])
         }
       }
 
@@ -108,7 +100,6 @@ export default function SettingsPage() {
   const avatarToShow = limnData?.avatar_url || profile?.avatar_url
   const accountType = profile?.role || 'Member'
   
-  // Calculate Member Since
   const memberSince = profile?.created_at 
     ? new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
     : 'Recently'
@@ -144,15 +135,15 @@ export default function SettingsPage() {
             <div className="space-y-6">
               <div className="flex items-center gap-5">
                 
-                {/* THE NEW ANIMATED RING CONTAINER */}
-                <div className="animated-ring h-16 w-16 shrink-0 rounded-2xl bg-[#05060a]">
-                  <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-2xl bg-[#00A3FF]/12 text-2xl font-bold text-[#00A3FF]">
-                    {avatarToShow ? (
-                      <img src={avatarToShow} alt="Avatar" className="h-full w-full object-cover" />
-                    ) : (
-                      (displayName[0] ?? 'E').toUpperCase()
-                    )}
-                  </div>
+                {/* Spinning Circular Avatar */}
+                <div className="animated-avatar-ring h-16 w-16 shrink-0">
+                  {avatarToShow ? (
+                    <img src={avatarToShow} alt="Avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-[#00A3FF]/12 text-2xl font-bold text-[#00A3FF]">
+                      {(displayName[0] ?? 'E').toUpperCase()}
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -176,7 +167,6 @@ export default function SettingsPage() {
                 <Field label="Username" {...field('username')} placeholder={limnData?.username ?? ''} />
                 <Field label="Email" defaultValue={email} disabled />
                 
-                {/* Read-only Role display */}
                 <div>
                   <label className="mb-2 block text-xs uppercase tracking-[0.14em] text-white/40">Account Role</label>
                   <div className="w-full rounded-xl border border-white/5 bg-black/20 px-4 py-2.5 text-sm text-white/50">
