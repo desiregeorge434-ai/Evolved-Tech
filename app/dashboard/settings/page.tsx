@@ -25,6 +25,8 @@ export default function SettingsPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [limnAvatar, setLimnAvatar] = useState<string | null>(null)
+  const [limnName, setLimnName] = useState<string | null>(null)
+  const [limnUsername, setLimnUsername] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -52,17 +54,14 @@ export default function SettingsPage() {
         role: p?.role ?? '',
       })
 
-      // Fetch avatar directly from the linked Limn database using the email
+      // Fetch Limn data using the database function
       if (userEmail) {
-        const { data: limnData } = await supabase
-          .from('limn_users')
-          .select('profiles(avatar_url)')
-          .eq('email', userEmail)
-          .maybeSingle()
-
-        // If the link found the user, set the avatar
-        if (limnData?.profiles && Array.isArray(limnData.profiles)) {
-           setLimnAvatar(limnData.profiles[0]?.avatar_url || null)
+        const { data: limnData } = await supabase.rpc('get_limn_profile', { user_email: userEmail })
+        
+        if (limnData && limnData.length > 0) {
+          setLimnAvatar(limnData[0].avatar_url)
+          setLimnName(limnData[0].display_name)
+          setLimnUsername(limnData[0].username)
         }
       }
 
@@ -104,6 +103,9 @@ export default function SettingsPage() {
     )
   }
 
+  // Fallback to Limn data if Evolved Tech data is empty
+  const displayName = profile?.full_name || limnName || limnUsername || email
+  const displayUsername = profile?.username || limnUsername
   const avatarToShow = limnAvatar || profile?.avatar_url
 
   return (
@@ -140,12 +142,12 @@ export default function SettingsPage() {
                   {avatarToShow ? (
                     <img src={avatarToShow} alt="Avatar" className="h-full w-full object-cover" />
                   ) : (
-                    (profile?.full_name?.[0] ?? profile?.username?.[0] ?? email?.[0] ?? 'E').toUpperCase()
+                    (displayName[0] ?? 'E').toUpperCase()
                   )}
                 </div>
                 <div>
                   <p className="text-sm font-medium">
-                    {profile?.full_name || profile?.username || email}
+                    {displayName}
                   </p>
                   <p className="mt-1 text-xs text-white/35">
                     {profile?.is_verified ? 'Verified' : 'Member'} since{' '}
@@ -168,9 +170,9 @@ export default function SettingsPage() {
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Full name" {...field('full_name')} />
-                <Field label="Username" {...field('username')} />
-                <Field label="Role" {...field('role')} />
+                <Field label="Full name" {...field('full_name')} placeholder={limnName ?? ''} />
+                <Field label="Username" {...field('username')} placeholder={limnUsername ?? ''} />
+                <Field label="Role" {...field('role')} placeholder={profile?.role ?? ''} />
                 <Field label="Email" defaultValue={email} disabled />
               </div>
 
@@ -225,12 +227,14 @@ function Field({
   value,
   onChange,
   defaultValue,
+  placeholder,
   disabled,
 }: {
   label: string
   value?: string
   onChange?: (v: string) => void
   defaultValue?: string
+  placeholder?: string
   disabled?: boolean
 }) {
   return (
@@ -239,6 +243,7 @@ function Field({
       <input
         value={value}
         defaultValue={defaultValue}
+        placeholder={placeholder}
         onChange={onChange ? (e) => onChange(e.target.value) : undefined}
         disabled={disabled}
         className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white outline-none transition-colors focus:border-[#00A3FF]/60 disabled:opacity-50"
