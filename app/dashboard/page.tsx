@@ -19,7 +19,7 @@ import { loadMyGames, arcadeUrl, type MyGame } from '@/lib/limn'
 export default function DashboardPage() {
   const router = useRouter()
   const [email, setEmail] = useState<string | null>(null)
-  const [fullName, setFullName] = useState<string | null>(null)
+  const [displayName, setDisplayName] = useState<string | null>(null)
   const [avatar, setAvatar] = useState<string | null>(null)
   const [checking, setChecking] = useState(true)
   const [mine, setMine] = useState<MyGame[] | null>(null)
@@ -36,28 +36,27 @@ export default function DashboardPage() {
       const mail = auth.user.email ?? null
       setEmail(mail)
 
+      // 1. Get Evolved Tech profile (if they set a name here)
       const profile = await getProfile(supabase, auth.user.id)
-      if (profile?.full_name) {
-        setFullName(profile.full_name)
+      let nameToUse = profile?.full_name
+
+      // 2. Get Limn Engine profile using the database function we just created
+      if (mail) {
+        const { data: limnData, error } = await supabase.rpc('get_limn_profile', { user_email: mail })
+        
+        if (!error && limnData && limnData.length > 0) {
+          const limnProfile = limnData[0]
+          setAvatar(limnProfile.avatar_url)
+          // If they didn't set a name in Evolved Tech, use their Limn display name
+          if (!nameToUse) nameToUse = limnProfile.display_name || limnProfile.username
+        }
       }
 
+      setDisplayName(nameToUse || null)
       setChecking(false)
       
       if (mail) {
         loadMyGames(mail).then(setMine).catch(() => setMine([]))
-      }
-
-      // Fetch avatar directly from the linked Limn database
-      if (mail) {
-        const { data: limnData } = await supabase
-          .from('limn_users')
-          .select('profiles(avatar_url)')
-          .eq('email', mail)
-          .maybeSingle()
-
-        if (limnData?.profiles && Array.isArray(limnData.profiles)) {
-           setAvatar(limnData.profiles[0]?.avatar_url || null)
-        }
       }
     })
 
@@ -78,7 +77,7 @@ export default function DashboardPage() {
 
   const gamesCount = mine?.length ?? 0
   const totalPlays = mine?.reduce((acc, game) => acc + (game.plays || 0), 0) ?? 0
-  const displayName = fullName || (email ? email.split('@')[0] : 'Creator')
+  const finalName = displayName || (email ? email.split('@')[0] : 'Creator')
 
   const stats = [
     { label: 'Your Games', value: gamesCount, icon: Gamepad2 },
@@ -94,13 +93,13 @@ export default function DashboardPage() {
             {avatar ? (
               <img src={avatar} alt="Avatar" className="h-full w-full object-cover" />
             ) : (
-              (displayName[0]).toUpperCase()
+              (finalName[0]).toUpperCase()
             )}
           </div>
           <div>
             <p className="text-[11px] uppercase tracking-[0.22em] text-white/40">Workspace</p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight md:text-4xl">
-              Welcome back, {displayName}
+              Welcome back, {finalName}
             </h1>
           </div>
         </div>
@@ -113,6 +112,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
+      {/* The rest of the dashboard UI stays exactly the same */}
       <div className="mt-10 grid gap-4 sm:grid-cols-3">
         {stats.map((s) => {
           const Icon = s.icon
