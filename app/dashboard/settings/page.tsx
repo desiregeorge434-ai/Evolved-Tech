@@ -37,7 +37,7 @@ export default function SettingsPage() {
     const supabase = createClient()
     supabase.auth.getUser().then(async ({ data: auth }) => {
       if (!auth.user) {
-        router.replace('/auth/login?next=/dashboard/settings')
+        router.replace('/login')
         return
       }
       const userEmail = auth.user.email ?? ''
@@ -101,7 +101,6 @@ export default function SettingsPage() {
   const avatarToShow = limnData?.avatar_url || profile?.avatar_url
   const accountType = profile?.role || 'Member'
   
-  // Use the real Limn created_at date, falling back to Evolved Tech's date if missing
   const memberSince = limnData?.created_at 
     ? new Date(limnData.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
     : profile?.created_at 
@@ -139,7 +138,6 @@ export default function SettingsPage() {
             <div className="space-y-6">
               <div className="flex items-center gap-5">
                 
-                {/* VIBRANT GLASSY AVATAR */}
                 <div className="glassy-avatar-wrapper h-20 w-20 shrink-0">
                   <div className="glassy-avatar-inner">
                     {avatarToShow && !imageError ? (
