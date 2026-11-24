@@ -1,273 +1,46 @@
-'use client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { User, Building2, Check, Loader2, ExternalLink, AlertCircle } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { loadLimnAvatar } from '@/lib/limn'
-import {
-  getProfile,
-  updateProfile,
-  type Profile,
-  type ProfileUpdate,
-} from '@/lib/supabase/profile'
-
-const TABS = [
-  { id: 'profile', label: 'Profile', icon: User },
-  { id: 'account', label: 'Account', icon: Building2 },
-] as const
-
-type TabId = (typeof TABS)[number]['id']
-
-export default function SettingsPage() {
-  const router = useRouter()
-  const [tab, setTab] = useState<TabId>('profile')
-  const [email, setEmail] = useState('')
-  const [userId, setUserId] = useState<string | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [limnAvatar, setLimnAvatar] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const [form, setForm] = useState<ProfileUpdate>({})
-
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: auth }) => {
-      if (!auth.user) {
-        router.replace('/auth/login?next=/dashboard/settings')
-        return
-      }
-      setEmail(auth.user.email ?? '')
-      setUserId(auth.user.id)
-      
-      const p = await getProfile(supabase, auth.user.id)
-      setProfile(p)
-      setForm({
-        full_name: p?.full_name ?? '',
-        username: p?.username ?? '',
-        bio: p?.bio ?? '',
-        role: p?.role ?? '',
-        limn_username: p?.limn_username ?? '',
-      })
-
-      if (p?.limn_username) {
-        const avatar = await loadLimnAvatar(p.limn_username)
-        setLimnAvatar(avatar)
-      }
-
-      setLoading(false)
-    })
-  }, [router])
-
-  const field = (key: keyof ProfileUpdate) => ({
-    value: form[key] ?? '',
-    onChange: (v: string) => setForm((f) => ({ ...f, [key]: v })),
-  })
-
-  const save = async () => {
-    if (!userId) return
-    
-    // Make Limn Username required
-    if (!form.limn_username?.trim()) {
-      setError('Limn Username is required to sync your account.')
-      return
-    }
-
-    setSaving(true)
-    setError(null)
-
-    const supabase = createClient()
-    const result = await updateProfile(supabase, userId, form)
-
-    setSaving(false)
-    if (!result.ok) {
-      setError(result.error)
-      return
-    }
-    
-    const fresh = await getProfile(supabase, userId)
-    setProfile(fresh)
-    
-    if (fresh?.limn_username) {
-      const avatar = await loadLimnAvatar(fresh.limn_username)
-      setLimnAvatar(avatar)
-    }
-
-    setSaved(true)
-    setTimeout(() => setSaved(false), 1800)
-  }
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[70vh] items-center justify-center">
-        <Loader2 size={18} className="animate-spin text-white/30" />
-      </div>
-    )
-  }
-
-  const avatarToShow = limnAvatar || profile?.avatar_url
-
-  return (
-    <div className="mx-auto max-w-5xl px-6 py-10 lg:px-10 lg:py-14">
-      <p className="text-[11px] uppercase tracking-[0.22em] text-white/40">Settings</p>
-      <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Your account</h1>
-      <p className="mt-2 text-sm text-white/45">Manage your profile and account details.</p>
-
-      <div className="mt-10 grid gap-6 lg:grid-cols-[200px_1fr]">
-        <div className="flex gap-1 overflow-x-auto lg:flex-col">
-          {TABS.map((t) => {
-            const Icon = t.icon
-            const active = tab === t.id
-            return (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className={`flex shrink-0 items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm transition-colors ${
-                  active ? 'bg-white/8 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <Icon size={15} className={active ? 'text-[#00A3FF]' : 'text-white/35'} />
-                {t.label}
-              </button>
-            )
-          })}
-        </div>
-
-        <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-6 md:p-8">
-          {tab === 'profile' && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#00A3FF]/12 text-2xl font-bold text-[#00A3FF]">
-                  {avatarToShow ? (
-                    <img src={avatarToShow} alt="Avatar" className="h-full w-full object-cover" />
-                  ) : (
-                    (profile?.full_name?.[0] ?? profile?.username?.[0] ?? email?.[0] ?? 'E').toUpperCase()
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm font-medium">
-                    {profile?.full_name || profile?.username || email}
-                  </p>
-                  <p className="mt-1 text-xs text-white/35">
-                    {profile?.is_verified ? 'Verified' : 'Member'} since{' '}
-                    {profile?.created_at
-                      ? new Date(profile.created_at).toLocaleDateString(undefined, {
-                          month: 'long',
-                          year: 'numeric',
-                        })
-                      : '—'}
-                  </p>
-                  <a 
-                    href="https://limn-engine-doc.vercel.app/settings" 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="mt-2 inline-flex items-center gap-1 text-[10px] text-[#00A3FF] hover:underline"
-                  >
-                    Change avatar in Limn Engine <ExternalLink size={10} />
-                  </a>
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Full name" {...field('full_name')} />
-                <Field label="Username" {...field('username')} />
-                <Field label="Role" {...field('role')} />
-                <Field label="Email" defaultValue={email} disabled />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-xs uppercase tracking-[0.14em] text-white/40">
-                  Bio
-                </label>
-                <textarea
-                  rows={4}
-                  value={form.bio ?? ''}
-                  onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))}
-                  className="w-full resize-none rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition-colors focus:border-[#00A3FF]/60"
-                />
-              </div>
-
-              <div className="pt-6 border-t border-white/5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold flex items-center gap-2">
-                    Limn Engine Sync <span className="text-red-400 text-xs">*required</span>
-                  </h3>
-                  <a 
-                    href="https://limn-engine-doc.vercel.app/settings" 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="text-xs text-[#00A3FF] hover:underline flex items-center gap-1"
-                  >
-                    Find your username <ExternalLink size={12} />
-                  </a>
-                </div>
-                <Field label="Limn Username" {...field('limn_username')} />
-                <p className="mt-2 text-xs leading-relaxed text-white/35">
-                  Enter your exact Limn Engine username (e.g., <span className="text-white/50">dezzy</span>) to automatically sync your avatar and games. You can find or change this username on your Limn Engine profile page.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {tab === 'account' && (
-            <div className="space-y-4">
-              <Field label="Email" defaultValue={email} disabled />
-              <Field label="User ID" defaultValue={userId ?? ''} disabled />
-            </div>
-          )}
-
-          {error && (
-            <div className="mt-6 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3">
-              <AlertCircle size={16} className="mt-0.5 shrink-0 text-red-400" />
-              <p className="text-xs text-red-300">{error}</p>
-            </div>
-          )}
-
-          <div className="mt-8 flex items-center gap-3 border-t border-white/5 pt-6">
-            <button
-              onClick={save}
-              disabled={saving || tab !== 'profile'}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#00A3FF] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0089d6] disabled:opacity-60"
-            >
-              {saving ? <Loader2 size={15} className="animate-spin" /> : saved ? <Check size={15} /> : null}
-              {saving ? 'Saving' : saved ? 'Saved' : 'Save changes'}
-            </button>
-            <span className="text-xs text-white/30">
-              {tab === 'profile' ? 'Changes save to your profile.' : 'Read-only.'}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+export type Profile = {
+  id: string
+  username: string
+  full_name: string | null
+  avatar_url: string | null
+  bio: string | null
+  role: string | null
+  is_verified: boolean
+  created_at: string
+  limn_username: string | null // <--- Make sure this is here!
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  defaultValue,
-  disabled,
-}: {
-  label: string
-  value?: string
-  onChange?: (v: string) => void
-  defaultValue?: string
-  disabled?: boolean
-}) {
-  return (
-    <div>
-      <label className="mb-2 block text-xs uppercase tracking-[0.14em] text-white/40">{label}</label>
-      <input
-        value={value}
-        defaultValue={defaultValue}
-        onChange={onChange ? (e) => onChange(e.target.value) : undefined}
-        disabled={disabled}
-        className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white outline-none transition-colors focus:border-[#00A3FF]/60 disabled:opacity-50"
-      />
-    </div>
-  )
+export async function getProfile(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<Profile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username, full_name, avatar_url, bio, role, is_verified, created_at, limn_username')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (error) {
+    console.error('[profile] getProfile failed:', error.message)
+    return null
+  }
+  return data
+}
+
+export type ProfileUpdate = Partial<Pick<Profile, 'full_name' | 'username' | 'bio' | 'role' | 'limn_username'>>
+
+export async function updateProfile(
+  supabase: SupabaseClient,
+  userId: string,
+  patch: ProfileUpdate
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await supabase
+    .from('profiles')
+    .update(patch)
+    .eq('id', userId)
+
+  if (error) return { ok: false, error: error.message }
+  return { ok: true }
 }
