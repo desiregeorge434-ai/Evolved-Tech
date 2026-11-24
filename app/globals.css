@@ -2,14 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-@keyframes slow-milky-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+@keyframes glass-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .glassy-avatar-wrapper {
@@ -18,41 +14,33 @@
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  padding: 3px; /* The thickness of the glass border */
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-}
-
-/* The slow moving milky blue/black aura */
-.glassy-avatar-wrapper::before {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: inherit;
-  background: conic-gradient(
-    from 0deg, 
-    #05060a 0%, 
-    #00A3FF 25%, 
-    #001a33 50%, 
-    #00A3FF 75%, 
-    #05060a 100%
+  padding: 3px; /* The thickness of the border */
+  /* The milky blue/black/white gradient */
+  background: linear-gradient(
+    120deg, 
+    rgba(0, 163, 255, 0.4) 0%, 
+    rgba(255, 255, 255, 0.1) 30%, 
+    rgba(5, 6, 10, 0.9) 50%, 
+    rgba(0, 163, 255, 0.4) 100%
   );
-  animation: slow-milky-spin 8s linear infinite, pulse-glow 4s ease-in-out infinite;
-  z-index: 0;
-  filter: blur(6px);
+  background-size: 200% 200%;
+  animation: glass-shift 6s ease-in-out infinite;
+  box-shadow: 
+    inset 0 0 10px rgba(255, 255, 255, 0.05),
+    0 0 15px rgba(0, 163, 255, 0.1);
 }
 
-/* The glass overlay that covers the center */
+/* The glassy overlay */
 .glassy-avatar-wrapper::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
   background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0) 100%);
-  z-index: 1;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   pointer-events: none;
+  z-index: 5;
 }
 
 .glassy-avatar-inner {
@@ -63,5 +51,6 @@
   width: 100%;
   height: 100%;
   background: #05060a;
-  box-shadow: inset 0 0 10px rgba(0, 163, 255, 0.2);
+  /* Subtle inner shadow to make the image look inset */
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8);
 }
