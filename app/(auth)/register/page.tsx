@@ -21,6 +21,11 @@ export default function RegisterPage() {
     e.preventDefault()
     setError(null)
 
+    if (!name.trim()) {
+      setError('Please enter your display name.')
+      return
+    }
+
     if (password.length < 8) {
       setError('Use at least 8 characters for your password.')
       return
@@ -115,7 +120,7 @@ export default function RegisterPage() {
           type="text"
           value={name}
           onChange={setName}
-          placeholder="Desire"
+          placeholder="Enter your name"
           autoComplete="name"
         />
         <Field
@@ -145,7 +150,7 @@ export default function RegisterPage() {
 
         <button
           type="submit"
-          disabled={loading || !email || !password}
+          disabled={loading || !email || !password || !name}
           className="group flex w-full items-center justify-center gap-2 rounded-xl bg-[#00A3FF] px-6 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[#0089d6] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? <Loader2 size={15} className="animate-spin" /> : null}
