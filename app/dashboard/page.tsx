@@ -30,13 +30,12 @@ export default function DashboardPage() {
 
     supabase.auth.getUser().then(async ({ data: auth }) => {
       if (!auth.user) {
-        router.replace('/login?next=/dashboard')
+        router.replace('/auth/login?next=/dashboard')
         return
       }
       const mail = auth.user.email ?? null
       setEmail(mail)
 
-      // Fetch Evolved Tech profile (to get the Full Name)
       const profile = await getProfile(supabase, auth.user.id)
       if (profile?.full_name) {
         setFullName(profile.full_name)
@@ -45,15 +44,16 @@ export default function DashboardPage() {
       setChecking(false)
       
       if (mail) {
-        // Load their games
         loadMyGames(mail).then(setMine).catch(() => setMine([]))
-        // Load their Limn avatar
-        loadLimnAvatar(mail).then(setAvatar).catch(() => setAvatar(null))
+      }
+
+      if (profile?.limn_username) {
+        loadLimnAvatar(profile.limn_username).then(setAvatar).catch(() => setAvatar(null))
       }
     })
 
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') router.replace('/login?next=/dashboard')
+      if (event === 'SIGNED_OUT') router.replace('/auth/login?next=/dashboard')
     })
 
     return () => sub.subscription.unsubscribe()
@@ -69,21 +69,20 @@ export default function DashboardPage() {
 
   const gamesCount = mine?.length ?? 0
   const totalPlays = mine?.reduce((acc, game) => acc + (game.plays || 0), 0) ?? 0
-
-  // Use Full Name if it exists, otherwise fallback to email prefix
   const displayName = fullName || (email ? email.split('@')[0] : 'Creator')
 
   const stats = [
     { label: 'Your Games', value: gamesCount, icon: Gamepad2 },
     { label: 'Total Plays', value: totalPlays, icon: Heart },
-    { label: 'Followers', value: '-', icon: MessageSquare },
+    { label: 'Comments', value: 0, icon: MessageSquare },
   ]
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10 lg:px-10 lg:py-14">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#00A3FF]/12 text-xl font-bold text-[#00A3FF]">
+          {/* Glowing Avatar Border added here */}
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#00A3FF]/12 text-xl font-bold text-[#00A3FF] ring-1 ring-white/10 shadow-[0_0_20px_rgba(0,163,255,0.15)]">
             {avatar ? (
               <img src={avatar} alt="Avatar" className="h-full w-full object-cover" />
             ) : (
