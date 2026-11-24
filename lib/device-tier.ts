@@ -27,6 +27,76 @@ function hasWebGL(): boolean {
   }
 }
 
+// NEW: Stress test the GPU to see how fast it can render a complex frame
+function runGpuStressTest(): boolean {
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = 256
+    canvas.height = 256
+    const gl = canvas.getContext('webgl', { failIfMajorPerformanceCaveat: true })
+    if (!gl) return true // If it fails, let the normal WebGL check handle it
+
+    // A heavy fragment shader (simulating particles/shadows) to stress the GPU
+    const vsSource = `
+      attribute vec2 position;
+      void main() { gl_Position = vec4(position, 0.0, 1.0); }
+    `
+    const fsSource = `
+      precision highp float;
+      void main() {
+        vec2 p = gl_FragCoord.xy;
+        float c = 0.0;
+        // Heavy loop to simulate complex cinematic rendering
+        for(int i = 0; i < 500; i++) {
+          c += sin(p.x * 0.01 + float(i)) * cos(p.y * 0.01 + float(i));
+        }
+        gl_FragColor = vec4(vec3(abs(c)), 1.0);
+      }
+    `
+
+    const compileShader = (type: number, source: string) => {
+      const shader = gl.createShader(type)!
+      gl.shaderSource(shader, source)
+      gl.compileShader(shader)
+      return shader
+    }
+
+    const program = gl.createProgram()!
+    gl.attachShader(program, compileShader(gl.VERTEX_SHADER, vsSource))
+    gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER, fsSource))
+    gl.linkProgram(program)
+    gl.useProgram(program)
+
+    const buffer = gl.createBuffer()
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW)
+
+    const posAttrib = gl.getAttribLocation(program, 'position')
+    gl.enableVertexAttribArray(posAttrib)
+    gl.vertexAttribPointer(posAttrib, 2, gl.FLOAT, false, 0, 0)
+
+    // Run the render and measure the time
+    const start = performance.now()
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+    gl.finish() // Wait for GPU to actually finish drawing
+    const end = performance.now()
+
+    // Clean up memory immediately
+    gl.deleteProgram(program)
+    gl.deleteBuffer(buffer)
+    const lose = gl.getExtension('WEBGL_lose_context')
+    lose?.loseContext()
+
+    const timeTaken = end - start
+    console.log(`[Device Tier] GPU Stress Test took ${timeTaken.toFixed(2)}ms`)
+
+    // If the frame took longer than 25ms (less than 40fps), it's a laggy device
+    return timeTaken < 25
+  } catch {
+    return false
+  }
+}
+
 export function detectDevice(): DeviceProfile {
   const base: DeviceProfile = {
     tier: 'full',
@@ -73,6 +143,16 @@ export function detectDevice(): DeviceProfile {
       ...profile,
       tier: 'low',
       reason: `small=${small} cores=${cores} mem=${memory} net=${effective || 'unknown'}`,
+    }
+  }
+
+  // NEW: If hardware looks good, run the stress test to double-check
+  const passedStressTest = runGpuStressTest()
+  if (!passedStressTest) {
+    return {
+      ...profile,
+      tier: 'low',
+      reason: 'failed-gpu-stress-test',
     }
   }
 
