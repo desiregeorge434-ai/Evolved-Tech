@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [avatar, setAvatar] = useState<string | null>(null)
   const [checking, setChecking] = useState(true)
   const [mine, setMine] = useState<MyGame[] | null>(null)
+  const [commentsCount, setCommentsCount] = useState<number>(0)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -40,23 +41,24 @@ export default function DashboardPage() {
       let nameToUse = profile?.full_name
 
       if (mail) {
+        // 1. Fetch Limn Profile Data
         const { data: limnData, error: rpcError } = await supabase.rpc('get_limn_profile', { user_email: mail })
-        
         if (!rpcError && limnData && limnData.length > 0) {
           const profileData = limnData[0] as any
           setAvatar(profileData.avatar_url)
           if (!nameToUse) nameToUse = profileData.display_name || profileData.username
-        } else if (rpcError) {
-          console.error("Limn RPC Error:", rpcError)
         }
+
+        // 2. Fetch Comment Count
+        const { data: commentData } = await supabase.rpc('get_limn_user_comments', { user_email: mail })
+        if (commentData) setCommentsCount(commentData)
+
+        // 3. Fetch User's Games
+        loadMyGames(mail).then(setMine).catch(() => setMine([]))
       }
 
       setDisplayName(nameToUse || null)
       setChecking(false)
-      
-      if (mail) {
-        loadMyGames(mail).then(setMine).catch(() => setMine([]))
-      }
     })
 
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
@@ -81,7 +83,7 @@ export default function DashboardPage() {
   const stats = [
     { label: 'Your Games', value: gamesCount, icon: Gamepad2 },
     { label: 'Total Plays', value: totalPlays, icon: Heart },
-    { label: 'Comments', value: 0, icon: MessageSquare },
+    { label: 'Total Comments', value: commentsCount, icon: MessageSquare },
   ]
 
   return (
@@ -89,15 +91,17 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex items-center gap-4">
           
-          {/* Spinning Circular Avatar */}
-          <div className="animated-avatar-ring h-14 w-14 shrink-0">
-            {avatar ? (
-              <img src={avatar} alt="Avatar" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-[#00A3FF]/12 text-xl font-bold text-[#00A3FF]">
-                {(finalName[0]).toUpperCase()}
-              </div>
-            )}
+          {/* THE NEW GLASSY MILKY AVATAR */}
+          <div className="glassy-avatar-wrapper h-16 w-16 shrink-0">
+            <div className="glassy-avatar-inner">
+              {avatar ? (
+                <img src={avatar} alt="Avatar" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-[#00A3FF]/10 text-xl font-bold text-[#00A3FF]">
+                  {(finalName[0]).toUpperCase()}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
