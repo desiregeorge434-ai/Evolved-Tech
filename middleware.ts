@@ -31,6 +31,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  // If logged in, redirect away from auth pages
   if (user && AUTH_ROUTES.includes(pathname)) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
@@ -38,9 +39,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // WE REMOVED THE DASHBOARD PROTECTION HERE
   return response
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|videos|images).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|videos|images|api|.*\\..*).*)'],
 }
