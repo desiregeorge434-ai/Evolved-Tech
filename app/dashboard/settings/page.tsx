@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Building2, Check, Loader2, ExternalLink, AlertCircle } from 'lucide-react'
+import { User, Building2, Check, Loader2, ExternalLink } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { loadLimnAvatar } from '@/lib/limn'
 import {
   getProfile,
   updateProfile,
@@ -40,7 +39,8 @@ export default function SettingsPage() {
         router.replace('/auth/login?next=/dashboard/settings')
         return
       }
-      setEmail(auth.user.email ?? '')
+      const userEmail = auth.user.email ?? ''
+      setEmail(userEmail)
       setUserId(auth.user.id)
       
       const p = await getProfile(supabase, auth.user.id)
@@ -50,12 +50,20 @@ export default function SettingsPage() {
         username: p?.username ?? '',
         bio: p?.bio ?? '',
         role: p?.role ?? '',
-        limn_username: p?.limn_username ?? '',
       })
 
-      if (p?.limn_username) {
-        const avatar = await loadLimnAvatar(p.limn_username)
-        setLimnAvatar(avatar)
+      // Fetch avatar directly from the linked Limn database using the email
+      if (userEmail) {
+        const { data: limnData } = await supabase
+          .from('limn_users')
+          .select('profiles(avatar_url)')
+          .eq('email', userEmail)
+          .maybeSingle()
+
+        // If the link found the user, set the avatar
+        if (limnData?.profiles && Array.isArray(limnData.profiles)) {
+           setLimnAvatar(limnData.profiles[0]?.avatar_url || null)
+        }
       }
 
       setLoading(false)
@@ -69,12 +77,6 @@ export default function SettingsPage() {
 
   const save = async () => {
     if (!userId) return
-    
-    if (!form.limn_username?.trim()) {
-      setError('Limn Username is required to sync your account.')
-      return
-    }
-
     setSaving(true)
     setError(null)
 
@@ -90,11 +92,6 @@ export default function SettingsPage() {
     const fresh = await getProfile(supabase, userId)
     setProfile(fresh)
     
-    if (fresh?.limn_username) {
-      const avatar = await loadLimnAvatar(fresh.limn_username)
-      setLimnAvatar(avatar)
-    }
-
     setSaved(true)
     setTimeout(() => setSaved(false), 1800)
   }
@@ -139,7 +136,6 @@ export default function SettingsPage() {
           {tab === 'profile' && (
             <div className="space-y-6">
               <div className="flex items-center gap-4">
-                {/* Updated Avatar Container with glowing border */}
                 <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#00A3FF]/12 text-2xl font-bold text-[#00A3FF] ring-1 ring-white/10 shadow-[0_0_20px_rgba(0,163,255,0.15)]">
                   {avatarToShow ? (
                     <img src={avatarToShow} alt="Avatar" className="h-full w-full object-cover" />
@@ -189,26 +185,6 @@ export default function SettingsPage() {
                   className="w-full resize-none rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition-colors focus:border-[#00A3FF]/60"
                 />
               </div>
-
-              <div className="pt-6 border-t border-white/5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold flex items-center gap-2">
-                    Limn Engine Sync <span className="text-red-400 text-xs">*required</span>
-                  </h3>
-                  <a 
-                    href="https://limn-engine-doc.vercel.app/settings" 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="text-xs text-[#00A3FF] hover:underline flex items-center gap-1"
-                  >
-                    Find your username <ExternalLink size={12} />
-                  </a>
-                </div>
-                <Field label="Limn Username" {...field('limn_username')} />
-                <p className="mt-2 text-xs leading-relaxed text-white/35">
-                  Enter your exact Limn Engine username (e.g., <span className="text-white/50">dezzy</span>) to automatically sync your avatar and games. You can find or change this username on your Limn Engine profile page.
-                </p>
-              </div>
             </div>
           )}
 
@@ -220,10 +196,9 @@ export default function SettingsPage() {
           )}
 
           {error && (
-            <div className="mt-6 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3">
-              <AlertCircle size={16} className="mt-0.5 shrink-0 text-red-400" />
-              <p className="text-xs text-red-300">{error}</p>
-            </div>
+            <p className="mt-6 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs text-red-300">
+              {error}
+            </p>
           )}
 
           <div className="mt-8 flex items-center gap-3 border-t border-white/5 pt-6">
