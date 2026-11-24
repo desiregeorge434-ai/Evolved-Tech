@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getProfile } from '@/lib/supabase/profile'
-import { loadLimnAvatar, loadMyGames, arcadeUrl, type MyGame } from '@/lib/limn'
+import { loadMyGames, arcadeUrl, type MyGame } from '@/lib/limn'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -47,8 +47,17 @@ export default function DashboardPage() {
         loadMyGames(mail).then(setMine).catch(() => setMine([]))
       }
 
-      if (profile?.limn_username) {
-        loadLimnAvatar(profile.limn_username).then(setAvatar).catch(() => setAvatar(null))
+      // Fetch avatar directly from the linked Limn database
+      if (mail) {
+        const { data: limnData } = await supabase
+          .from('limn_users')
+          .select('profiles(avatar_url)')
+          .eq('email', mail)
+          .maybeSingle()
+
+        if (limnData?.profiles && Array.isArray(limnData.profiles)) {
+           setAvatar(limnData.profiles[0]?.avatar_url || null)
+        }
       }
     })
 
@@ -81,7 +90,6 @@ export default function DashboardPage() {
     <div className="mx-auto max-w-6xl px-6 py-10 lg:px-10 lg:py-14">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex items-center gap-4">
-          {/* Glowing Avatar Border added here */}
           <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#00A3FF]/12 text-xl font-bold text-[#00A3FF] ring-1 ring-white/10 shadow-[0_0_20px_rgba(0,163,255,0.15)]">
             {avatar ? (
               <img src={avatar} alt="Avatar" className="h-full w-full object-cover" />
