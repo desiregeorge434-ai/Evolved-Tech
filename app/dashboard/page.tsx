@@ -36,20 +36,18 @@ export default function DashboardPage() {
       const mail = auth.user.email ?? null
       setEmail(mail)
 
-      // 1. Get Evolved Tech profile
       const profile = await getProfile(supabase, auth.user.id)
       let nameToUse = profile?.full_name
 
-      // 2. Get Limn Engine profile using the linked database function
       if (mail) {
-        const { data: limnData, error } = await supabase.rpc('get_limn_profile', { user_email: mail })
+        const { data: limnData, error: rpcError } = await supabase.rpc('get_limn_profile', { user_email: mail })
         
-        if (!error && limnData && limnData.length > 0) {
-          const limnProfile = limnData[0]
-          setAvatar(limnProfile.avatar_url)
-          
-          // Fallback to Limn name if Evolved Tech name is blank
-          if (!nameToUse) nameToUse = limnProfile.display_name || limnProfile.username
+        if (!rpcError && limnData && limnData.length > 0) {
+          const profileData = limnData[0] as any
+          setAvatar(profileData.avatar_url)
+          if (!nameToUse) nameToUse = profileData.display_name || profileData.username
+        } else if (rpcError) {
+          console.error("Limn RPC Error:", rpcError)
         }
       }
 
@@ -89,17 +87,17 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto max-w-6xl px-6 py-10 lg:px-10 lg:py-14">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-4">
           
-          {/* NEW ANIMATED AVATAR RING */}
-          <div className="animated-ring h-14 w-14 shrink-0 rounded-2xl bg-[#05060a]">
-            <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-2xl bg-[#00A3FF]/12 text-xl font-bold text-[#00A3FF]">
-              {avatar ? (
-                <img src={avatar} alt="Avatar" className="h-full w-full object-cover" />
-              ) : (
-                (finalName[0]).toUpperCase()
-              )}
-            </div>
+          {/* Spinning Circular Avatar */}
+          <div className="animated-avatar-ring h-14 w-14 shrink-0">
+            {avatar ? (
+              <img src={avatar} alt="Avatar" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-[#00A3FF]/12 text-xl font-bold text-[#00A3FF]">
+                {(finalName[0]).toUpperCase()}
+              </div>
+            )}
           </div>
 
           <div>
