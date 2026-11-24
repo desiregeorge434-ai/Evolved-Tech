@@ -83,3 +83,18 @@ export async function loadMyGames(email: string): Promise<MyGame[]> {
     return []
   }
 }
+
+export async function loadLimnAvatar(email: string): Promise<string | null> {
+  if (!email) return null
+  try {
+    const res = await fetch(
+      `${LIMN_URL}/rest/v1/profiles?select=avatar_url&username=eq.${encodeURIComponent(email)}&limit=1`,
+      { headers }
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    return data[0]?.avatar_url || null
+  } catch {
+    return null
+  }
+}
