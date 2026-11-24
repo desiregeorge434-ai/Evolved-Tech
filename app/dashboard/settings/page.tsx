@@ -18,15 +18,20 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id']
 
+type LimnProfileData = {
+  username: string
+  display_name: string
+  avatar_url: string
+  bio: string
+}
+
 export default function SettingsPage() {
   const router = useRouter()
   const [tab, setTab] = useState<TabId>('profile')
   const [email, setEmail] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [limnAvatar, setLimnAvatar] = useState<string | null>(null)
-  const [limnName, setLimnName] = useState<string | null>(null)
-  const [limnUsername, setLimnUsername] = useState<string | null>(null)
+  const [limnData, setLimnData] = useState<LimnProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -56,12 +61,10 @@ export default function SettingsPage() {
 
       // Fetch Limn data using the database function
       if (userEmail) {
-        const { data: limnData } = await supabase.rpc('get_limn_profile', { user_email: userEmail })
+        const { data, error: rpcError } = await supabase.rpc('get_limn_profile', { user_email: userEmail })
         
-        if (limnData && limnData.length > 0) {
-          setLimnAvatar(limnData[0].avatar_url)
-          setLimnName(limnData[0].display_name)
-          setLimnUsername(limnData[0].username)
+        if (!rpcError && data && data.length > 0) {
+          setLimnData(data[0] as LimnProfileData)
         }
       }
 
@@ -103,10 +106,8 @@ export default function SettingsPage() {
     )
   }
 
-  // Fallback to Limn data if Evolved Tech data is empty
-  const displayName = profile?.full_name || limnName || limnUsername || email
-  const displayUsername = profile?.username || limnUsername
-  const avatarToShow = limnAvatar || profile?.avatar_url
+  const displayName = profile?.full_name || limnData?.display_name || limnData?.username || email
+  const avatarToShow = limnData?.avatar_url || profile?.avatar_url
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-10 lg:px-10 lg:py-14">
@@ -170,8 +171,8 @@ export default function SettingsPage() {
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Full name" {...field('full_name')} placeholder={limnName ?? ''} />
-                <Field label="Username" {...field('username')} placeholder={limnUsername ?? ''} />
+                <Field label="Full name" {...field('full_name')} placeholder={limnData?.display_name ?? ''} />
+                <Field label="Username" {...field('username')} placeholder={limnData?.username ?? ''} />
                 <Field label="Role" {...field('role')} placeholder={profile?.role ?? ''} />
                 <Field label="Email" defaultValue={email} disabled />
               </div>
