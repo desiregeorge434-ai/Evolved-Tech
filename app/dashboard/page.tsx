@@ -41,19 +41,21 @@ export default function DashboardPage() {
       let nameToUse = profile?.full_name
 
       if (mail) {
-        // 1. Fetch Limn Profile Data
-        const { data: limnData, error: rpcError } = await supabase.rpc('get_limn_profile', { user_email: mail })
-        if (!rpcError && limnData && limnData.length > 0) {
+        // 1. Avatar & Name
+        const { data: limnData } = await supabase.rpc('get_limn_profile', { user_email: mail })
+        if (limnData && limnData.length > 0) {
           const profileData = limnData[0] as any
           setAvatar(profileData.avatar_url)
           if (!nameToUse) nameToUse = profileData.display_name || profileData.username
         }
 
-        // 2. Fetch Comment Count
+        // 2. Comments (Force parsing to a number just in case)
         const { data: commentData } = await supabase.rpc('get_limn_user_comments', { user_email: mail })
-        if (commentData) setCommentsCount(commentData)
+        if (commentData !== null && commentData !== undefined) {
+           setCommentsCount(Number(commentData) || 0)
+        }
 
-        // 3. Fetch User's Games
+        // 3. Games
         loadMyGames(mail).then(setMine).catch(() => setMine([]))
       }
 
@@ -91,7 +93,7 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex items-center gap-4">
           
-          {/* THE NEW GLASSY MILKY AVATAR */}
+          {/* Glossy Milky Avatar */}
           <div className="glassy-avatar-wrapper h-16 w-16 shrink-0">
             <div className="glassy-avatar-inner">
               {avatar ? (
