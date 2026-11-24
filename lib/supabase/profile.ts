@@ -9,6 +9,7 @@ export type Profile = {
   role: string | null
   is_verified: boolean
   created_at: string
+  limn_username: string | null // <--- THIS LINE IS CRITICAL
 }
 
 export async function getProfile(
@@ -17,7 +18,7 @@ export async function getProfile(
 ): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, full_name, avatar_url, bio, role, is_verified, created_at')
+    .select('id, username, full_name, avatar_url, bio, role, is_verified, created_at, limn_username')
     .eq('id', userId)
     .maybeSingle()
 
@@ -28,7 +29,7 @@ export async function getProfile(
   return data
 }
 
-export type ProfileUpdate = Partial<Pick<Profile, 'full_name' | 'username' | 'bio' | 'role'>>
+export type ProfileUpdate = Partial<Pick<Profile, 'full_name' | 'username' | 'bio' | 'role' | 'limn_username'>> // <--- AND THIS LINE
 
 export async function updateProfile(
   supabase: SupabaseClient,
