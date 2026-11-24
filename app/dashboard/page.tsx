@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import {
   ArrowUpRight,
   Gamepad2,
-  Users,
   Heart,
   MessageSquare,
   Settings as SettingsIcon,
@@ -14,50 +13,51 @@ import {
   Plus,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { loadLimnOverview, loadMyGames, arcadeUrl, type LimnOverview, type MyGame } from '@/lib/limn'
+import { getProfile } from '@/lib/supabase/profile'
+import { loadLimnAvatar, loadMyGames, arcadeUrl, type MyGame } from '@/lib/limn'
 
 export default function DashboardPage() {
   const router = useRouter()
   const [email, setEmail] = useState<string | null>(null)
+  const [fullName, setFullName] = useState<string | null>(null)
+  const [avatar, setAvatar] = useState<string | null>(null)
   const [checking, setChecking] = useState(true)
-  const [data, setData] = useState<LimnOverview | null>(null)
   const [mine, setMine] = useState<MyGame[] | null>(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
 
-    supabase.auth.getUser().then(({ data: auth }) => {
+    supabase.auth.getUser().then(async ({ data: auth }) => {
       if (!auth.user) {
         router.replace('/login?next=/dashboard')
         return
       }
       const mail = auth.user.email ?? null
       setEmail(mail)
+
+      // Fetch Evolved Tech profile (to get the Full Name)
+      const profile = await getProfile(supabase, auth.user.id)
+      if (profile?.full_name) {
+        setFullName(profile.full_name)
+      }
+
       setChecking(false)
-      if (mail) loadMyGames(mail).then(setMine).catch(() => setMine([]))
+      
+      if (mail) {
+        // Load their games
+        loadMyGames(mail).then(setMine).catch(() => setMine([]))
+        // Load their Limn avatar
+        loadLimnAvatar(mail).then(setAvatar).catch(() => setAvatar(null))
+      }
     })
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (!session) router.replace('/login?next=/dashboard')
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') router.replace('/login?next=/dashboard')
     })
 
     return () => sub.subscription.unsubscribe()
   }, [router])
-
-  useEffect(() => {
-    let cancelled = false
-    loadLimnOverview()
-      .then((overview) => {
-        if (!cancelled) setData(overview)
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   if (checking) {
     return (
@@ -67,21 +67,35 @@ export default function DashboardPage() {
     )
   }
 
+  const gamesCount = mine?.length ?? 0
+  const totalPlays = mine?.reduce((acc, game) => acc + (game.plays || 0), 0) ?? 0
+
+  // Use Full Name if it exists, otherwise fallback to email prefix
+  const displayName = fullName || (email ? email.split('@')[0] : 'Creator')
+
   const stats = [
-    { label: 'Games published', value: data?.games, icon: Gamepad2 },
-    { label: 'Creators', value: data?.creators, icon: Users },
-    { label: 'Likes', value: data?.likes, icon: Heart },
-    { label: 'Comments', value: data?.comments, icon: MessageSquare },
+    { label: 'Your Games', value: gamesCount, icon: Gamepad2 },
+    { label: 'Total Plays', value: totalPlays, icon: Heart },
+    { label: 'Followers', value: '-', icon: MessageSquare },
   ]
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10 lg:px-10 lg:py-14">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.22em] text-white/40">Workspace</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">
-            {email ? `Welcome back, ${email.split('@')[0]}` : 'Welcome back'}
-          </h1>
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#00A3FF]/12 text-xl font-bold text-[#00A3FF]">
+            {avatar ? (
+              <img src={avatar} alt="Avatar" className="h-full w-full object-cover" />
+            ) : (
+              (displayName[0]).toUpperCase()
+            )}
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.22em] text-white/40">Workspace</p>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight md:text-4xl">
+              Welcome back, {displayName}
+            </h1>
+          </div>
         </div>
         <Link
           href="/dashboard/settings"
@@ -92,7 +106,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-10 grid gap-4 sm:grid-cols-3">
         {stats.map((s) => {
           const Icon = s.icon
           return (
@@ -217,42 +231,6 @@ export default function DashboardPage() {
               </a>
             ))}
           </div>
-        </div>
-      </div>
-
-      <div className="mt-8 rounded-2xl border border-white/8 bg-white/[0.02] p-6 backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Recently on Limn</h2>
-          <a
-            href={arcadeUrl()}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 text-[11px] text-[#00A3FF] hover:underline"
-          >
-            Open arcade <ArrowUpRight size={12} />
-          </a>
-        </div>
-
-        <div className="mt-5 divide-y divide-white/5">
-          {!data && !failed && <p className="py-6 text-xs text-white/30">Loading activity...</p>}
-          {failed && <p className="py-6 text-xs text-red-300/70">Could not reach Limn Engine.</p>}
-          {data?.recent.map((g) => (
-            <a
-              key={g.slug}
-              href={arcadeUrl(g.slug)}
-              target="_blank"
-              rel="noreferrer"
-              className="group flex items-center justify-between py-3.5"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm text-white/75 group-hover:text-white">{g.title}</p>
-                <p className="mt-0.5 font-mono text-[10px] text-white/25">/{g.slug}</p>
-              </div>
-              <time className="ml-4 shrink-0 text-[10px] uppercase tracking-wider text-white/25">
-                {new Date(g.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-              </time>
-            </a>
-          ))}
         </div>
       </div>
     </div>
