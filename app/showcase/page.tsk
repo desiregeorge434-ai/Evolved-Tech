@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 import { Loader2, Heart, ExternalLink, Gamepad2 } from 'lucide-react'
-import Link from 'next/link'
 
 type PromotedGame = {
   id: string
@@ -16,28 +16,71 @@ type PromotedGame = {
 }
 
 export default function ShowcasePage() {
+  const router = useRouter()
   const [games, setGames] = useState<PromotedGame[]>([])
   const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userLikes, setUserLikes] = useState<string[]>([]) // Array of game IDs the user liked
 
   useEffect(() => {
     const supabase = createClient()
-    supabase
-      .from('promoted_games')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (data) setGames(data)
-        setLoading(false)
-      })
+
+    const fetchData = async () => {
+      // 1. Get User
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) setUserId(user.id)
+
+      // 2. Get Games
+      const { data: gamesData } = await supabase
+        .from('promoted_games')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (gamesData) setGames(gamesData)
+
+      // 3. Get User's Likes (if logged in)
+      if (user) {
+        const { data: likesData } = await supabase
+          .from('promoted_likes')
+          .select('game_id')
+          .eq('user_id', user.id)
+        
+        if (likesData) {
+          setUserLikes(likesData.map(l => l.game_id))
+        }
+      }
+
+      setLoading(false)
+    }
+
+    fetchData()
   }, [])
 
-  const handleLike = async (id: string, currentLikes: number) => {
+  const handleLike = async (gameId: string, currentLikes: number) => {
+    if (!userId) {
+      // If not logged in, send to login
+      router.push('/login')
+      return
+    }
+
     const supabase = createClient()
-    // Optimistically update UI
-    setGames(games.map(g => g.id === id ? { ...g, likes: currentLikes + 1 } : g))
-    
-    // Update DB
-    await supabase.from('promoted_games').update({ likes: currentLikes + 1 }).eq('id', id)
+    const isLiked = userLikes.includes(gameId)
+
+    if (isLiked) {
+      // UNLIKE
+      setUserLikes(userLikes.filter(id => id !== gameId))
+      setGames(games.map(g => g.id === gameId ? { ...g, likes: currentLikes - 1 } : g))
+      
+      await supabase.from('promoted_likes').delete().eq('game_id', gameId).eq('user_id', userId)
+      await supabase.from('promoted_games').update({ likes: currentLikes - 1 }).eq('id', gameId)
+    } else {
+      // LIKE
+      setUserLikes([...userLikes, gameId])
+      setGames(games.map(g => g.id === gameId ? { ...g, likes: currentLikes + 1 } : g))
+
+      await supabase.from('promoted_likes').insert({ game_id: gameId, user_id: userId })
+      await supabase.from('promoted_games').update({ likes: currentLikes + 1 }).eq('id', gameId)
+    }
   }
 
   if (loading) {
@@ -66,45 +109,50 @@ export default function ShowcasePage() {
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {games.map((game) => (
-            <div key={game.id} className="group overflow-hidden rounded-2xl border border-white/8 bg-white/[0.02] flex flex-col">
-              {/* Screenshot */}
-              <div className="aspect-video w-full overflow-hidden bg-black/50 relative">
-                {game.image_url ? (
-                  <img src={game.image_url} alt={game.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <Gamepad2 size={32} className="text-white/10" />
-                  </div>
-                )}
-              </div>
-              
-              <div className="p-5 flex flex-col flex-1">
-                <h3 className="text-lg font-bold text-white truncate">{game.title}</h3>
-                <p className="mt-2 text-xs leading-relaxed text-white/45 line-clamp-3 flex-1">
-                  {game.description}
-                </p>
+          {games.map((game) => {
+            const isLiked = userLikes.includes(game.id)
+            return (
+              <div key={game.id} className="group overflow-hidden rounded-2xl border border-white/8 bg-white/[0.02] flex flex-col">
+                {/* Screenshot */}
+                <div className="aspect-video w-full overflow-hidden bg-black/50 relative">
+                  {game.image_url ? (
+                    <img src={game.image_url} alt={game.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <Gamepad2 size={32} className="text-white/10" />
+                    </div>
+                  )}
+                </div>
                 
-                <div className="mt-5 flex items-center justify-between border-t border-white/5 pt-4">
-                  <button 
-                    onClick={() => handleLike(game.id, game.likes)}
-                    className="flex items-center gap-1.5 text-xs font-medium text-white/50 transition-colors hover:text-red-400"
-                  >
-                    <Heart size={14} /> {game.likes}
-                  </button>
+                <div className="p-5 flex flex-col flex-1">
+                  <h3 className="text-lg font-bold text-white truncate">{game.title}</h3>
+                  <p className="mt-2 text-xs leading-relaxed text-white/45 line-clamp-3 flex-1">
+                    {game.description}
+                  </p>
                   
-                  <a 
-                    href={game.game_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#00A3FF]/10 px-3 py-1.5 text-xs font-semibold text-[#00A3FF] transition-colors hover:bg-[#00A3FF]/20"
-                  >
-                    Play Now <ExternalLink size={12} />
-                  </a>
+                  <div className="mt-5 flex items-center justify-between border-t border-white/5 pt-4">
+                    <button 
+                      onClick={() => handleLike(game.id, game.likes)}
+                      className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${
+                        isLiked ? 'text-red-400' : 'text-white/50 hover:text-red-400'
+                      }`}
+                    >
+                      <Heart size={14} className={isLiked ? 'fill-red-400' : ''} /> {game.likes}
+                    </button>
+                    
+                    <a 
+                      href={game.game_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#00A3FF]/10 px-3 py-1.5 text-xs font-semibold text-[#00A3FF] transition-colors hover:bg-[#00A3FF]/20"
+                    >
+                      Play Now <ExternalLink size={12} />
+                    </a>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
