@@ -56,13 +56,11 @@ export default function SettingsPage() {
         full_name: p?.full_name ?? '',
         username: p?.username ?? '',
         bio: p?.bio ?? '',
-        role: p?.role ?? '',
+        // We do not include role here because users shouldn't edit it
       })
 
-      // Fetch Limn data using the database function
       if (userEmail) {
         const { data, error: rpcError } = await supabase.rpc('get_limn_profile', { user_email: userEmail })
-        
         if (!rpcError && data && data.length > 0) {
           setLimnData(data[0] as LimnProfileData)
         }
@@ -108,6 +106,12 @@ export default function SettingsPage() {
 
   const displayName = profile?.full_name || limnData?.display_name || limnData?.username || email
   const avatarToShow = limnData?.avatar_url || profile?.avatar_url
+  const accountType = profile?.role || 'Member'
+  
+  // Calculate Member Since
+  const memberSince = profile?.created_at 
+    ? new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+    : 'Recently'
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-10 lg:px-10 lg:py-14">
@@ -138,34 +142,31 @@ export default function SettingsPage() {
         <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-6 md:p-8">
           {tab === 'profile' && (
             <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#00A3FF]/12 text-2xl font-bold text-[#00A3FF] ring-1 ring-white/10 shadow-[0_0_20px_rgba(0,163,255,0.15)]">
-                  {avatarToShow ? (
-                    <img src={avatarToShow} alt="Avatar" className="h-full w-full object-cover" />
-                  ) : (
-                    (displayName[0] ?? 'E').toUpperCase()
-                  )}
+              <div className="flex items-center gap-5">
+                
+                {/* THE NEW ANIMATED RING CONTAINER */}
+                <div className="animated-ring h-16 w-16 shrink-0 rounded-2xl bg-[#05060a]">
+                  <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-2xl bg-[#00A3FF]/12 text-2xl font-bold text-[#00A3FF]">
+                    {avatarToShow ? (
+                      <img src={avatarToShow} alt="Avatar" className="h-full w-full object-cover" />
+                    ) : (
+                      (displayName[0] ?? 'E').toUpperCase()
+                    )}
+                  </div>
                 </div>
+
                 <div>
-                  <p className="text-sm font-medium">
-                    {displayName}
-                  </p>
-                  <p className="mt-1 text-xs text-white/35">
-                    {profile?.is_verified ? 'Verified' : 'Member'} since{' '}
-                    {profile?.created_at
-                      ? new Date(profile.created_at).toLocaleDateString(undefined, {
-                          month: 'long',
-                          year: 'numeric',
-                        })
-                      : '—'}
+                  <p className="text-lg font-medium text-white">{displayName}</p>
+                  <p className="mt-0.5 text-xs text-white/35">
+                    {accountType} · Member since {memberSince}
                   </p>
                   <a 
                     href="https://limn-engine-doc.vercel.app/settings" 
                     target="_blank" 
                     rel="noreferrer"
-                    className="mt-2 inline-flex items-center gap-1 text-[10px] text-[#00A3FF] hover:underline"
+                    className="mt-2 inline-flex items-center gap-1 text-xs text-[#00A3FF] hover:underline"
                   >
-                    Change avatar in Limn Engine <ExternalLink size={10} />
+                    Change avatar in Limn Engine <ExternalLink size={12} />
                   </a>
                 </div>
               </div>
@@ -173,8 +174,15 @@ export default function SettingsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Full name" {...field('full_name')} placeholder={limnData?.display_name ?? ''} />
                 <Field label="Username" {...field('username')} placeholder={limnData?.username ?? ''} />
-                <Field label="Role" {...field('role')} placeholder={profile?.role ?? ''} />
                 <Field label="Email" defaultValue={email} disabled />
+                
+                {/* Read-only Role display */}
+                <div>
+                  <label className="mb-2 block text-xs uppercase tracking-[0.14em] text-white/40">Account Role</label>
+                  <div className="w-full rounded-xl border border-white/5 bg-black/20 px-4 py-2.5 text-sm text-white/50">
+                    {accountType}
+                  </div>
+                </div>
               </div>
 
               <div>
