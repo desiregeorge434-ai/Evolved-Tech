@@ -29,6 +29,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [imageError, setImageError] = useState(false)
 
   const [form, setForm] = useState<ProfileUpdate>({})
 
@@ -135,11 +136,16 @@ export default function SettingsPage() {
             <div className="space-y-6">
               <div className="flex items-center gap-5">
                 
-                {/* THE NEW GLASSY MILKY AVATAR */}
+                {/* VIBRANT GLASSY AVATAR */}
                 <div className="glassy-avatar-wrapper h-20 w-20 shrink-0">
                   <div className="glassy-avatar-inner">
-                    {avatarToShow ? (
-                      <img src={avatarToShow} alt="Avatar" className="h-full w-full object-cover" />
+                    {avatarToShow && !imageError ? (
+                      <img 
+                        src={avatarToShow} 
+                        alt="Avatar" 
+                        className="h-full w-full object-cover" 
+                        onError={() => setImageError(true)}
+                      />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-[#00A3FF]/10 text-2xl font-bold text-[#00A3FF]">
                         {(displayName[0] ?? 'E').toUpperCase()}
@@ -154,7 +160,7 @@ export default function SettingsPage() {
                     {accountType} · Member since {memberSince}
                   </p>
                   <a 
-                    href="https://limn-engine-doc.vercel.app/settings" 
+                    href="https://limn-engine-doc.vercel.app/settings.html" 
                     target="_blank" 
                     rel="noreferrer"
                     className="mt-2 inline-flex items-center gap-1 text-xs text-[#00A3FF] hover:underline"
