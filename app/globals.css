@@ -2,29 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
-@keyframes spin-gradient {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+@keyframes spin-border {
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
-.animated-ring {
+.animated-avatar-ring {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 9999px; /* Makes it a perfect circle */
 }
 
-.animated-ring::before {
+.animated-avatar-ring::before {
   content: '';
   position: absolute;
-  inset: -2px;
+  inset: -3px; /* How thick the border is */
   border-radius: inherit;
-  background: conic-gradient(from 0deg, transparent 0 340deg, #00A3FF 360deg);
-  animation: spin-gradient 3s linear infinite;
+  background: conic-gradient(from 0deg, transparent 0 70%, #00A3FF 100%);
+  animation: spin-border 2.5s linear infinite;
   z-index: 0;
 }
 
-.animated-ring > * {
+.animated-avatar-ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #05060a; /* Matches your dark background */
+  z-index: 1;
+}
+
+.animated-avatar-ring > * {
   position: relative;
   z-index: 10;
+  border-radius: 9999px;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
 }
