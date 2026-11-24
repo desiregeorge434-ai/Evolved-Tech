@@ -1,3 +1,29 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities;
+@tailwind utilities
+@keyframes spin-gradient {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animated-ring {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.animated-ring::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg, transparent 0 340deg, #00A3FF 360deg);
+  animation: spin-gradient 3s linear infinite;
+  z-index: 0;
+}
+
+.animated-ring > * {
+  position: relative;
+  z-index: 10;
+}
