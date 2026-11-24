@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, ArrowUpRight } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, Gamepad2, Play } from 'lucide-react'
 import { CinematicIntro } from '@/components/CinematicIntro'
 import { AnimatedLogo } from '@/components/AnimatedLogo'
 import { SpaceBackground } from '@/components/SpaceBackground'
@@ -149,6 +149,56 @@ export default function Home() {
               >
                 See the roadmap
               </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* NEW COMMUNITY SHOWCASE SECTION */}
+        <section className="relative border-t border-white/[0.06] bg-[#05060a]/80 backdrop-blur-md">
+          <div className="mx-auto grid max-w-5xl gap-10 px-6 py-24 md:grid-cols-2 md:items-center lg:px-8">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#00A3FF]/20 bg-[#00A3FF]/10 px-3 py-1 mb-6">
+                <Gamepad2 size={14} className="text-[#00A3FF]" />
+                <span className="text-[10px] uppercase tracking-[0.2em] text-[#00A3FF] font-semibold">Community Showcase</span>
+              </div>
+              <h2 className="text-3xl font-bold leading-tight tracking-tight md:text-4xl text-white">
+                Play what the community is building.
+              </h2>
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-white/50">
+                Discover games built by other developers using Limn Engine, PlayGame.ai, and other platforms. Like your favorites, leave feedback, and see what's possible when you just create.
+              </p>
+              
+              <div className="mt-8 flex flex-wrap gap-4">
+                <Link
+                  href="/showcase"
+                  className="group inline-flex items-center justify-center gap-2 rounded-full bg-[#00A3FF] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0089d6]"
+                >
+                  Explore Games
+                  <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
+                </Link>
+                <Link
+                  href="/dashboard/promote"
+                  className="inline-flex items-center justify-center rounded-full border border-white/14 px-6 py-3 text-sm font-semibold text-white/80 transition-colors hover:bg-white/5 hover:text-white"
+                >
+                  Post Your Game
+                </Link>
+              </div>
+            </div>
+
+            {/* Visual Placeholder / Preview */}
+            <div className="relative rounded-2xl border border-white/8 bg-white/[0.02] p-2 shadow-2xl">
+              <div className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-black/50 relative flex items-center justify-center">
+                 {/* You can swap this with an actual screenshot later */}
+                 <div className="absolute inset-0 bg-gradient-to-br from-[#00A3FF]/10 to-black/80"></div>
+                 <Play size={40} className="text-white/20 relative z-10" />
+              </div>
+              <div className="absolute -bottom-4 -right-4 rounded-xl border border-white/10 bg-[#0f172a] p-4 shadow-xl backdrop-blur-md">
+                <p className="text-[10px] uppercase tracking-wider text-white/40">Trending Game</p>
+                <p className="text-sm font-bold text-white mt-1">Space Shooter</p>
+                <div className="flex items-center gap-1 mt-2 text-xs text-[#00A3FF]">
+                  <Gamepad2 size={12} /> 1.2k plays
+                </div>
+              </div>
             </div>
           </div>
         </section>
