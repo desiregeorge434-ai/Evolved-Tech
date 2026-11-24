@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Building2, Check, Loader2 } from 'lucide-react'
+import { User, Building2, Check, Loader2, ExternalLink } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { loadLimnAvatar } from '@/lib/limn'
 import {
   getProfile,
   updateProfile,
@@ -24,6 +25,7 @@ export default function SettingsPage() {
   const [email, setEmail] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [limnAvatar, setLimnAvatar] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -40,6 +42,7 @@ export default function SettingsPage() {
       }
       setEmail(auth.user.email ?? '')
       setUserId(auth.user.id)
+      
       const p = await getProfile(supabase, auth.user.id)
       setProfile(p)
       setForm({
@@ -48,6 +51,12 @@ export default function SettingsPage() {
         bio: p?.bio ?? '',
         role: p?.role ?? '',
       })
+
+      if (auth.user.email) {
+        const avatar = await loadLimnAvatar(auth.user.email)
+        setLimnAvatar(avatar)
+      }
+
       setLoading(false)
     })
   }, [router])
@@ -84,6 +93,8 @@ export default function SettingsPage() {
     )
   }
 
+  const avatarToShow = limnAvatar || profile?.avatar_url
+
   return (
     <div className="mx-auto max-w-5xl px-6 py-10 lg:px-10 lg:py-14">
       <p className="text-[11px] uppercase tracking-[0.22em] text-white/40">Settings</p>
@@ -114,8 +125,12 @@ export default function SettingsPage() {
           {tab === 'profile' && (
             <div className="space-y-6">
               <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#00A3FF]/12 text-2xl font-bold text-[#00A3FF]">
-                  {(profile?.full_name?.[0] ?? profile?.username?.[0] ?? email?.[0] ?? 'E').toUpperCase()}
+                <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#00A3FF]/12 text-2xl font-bold text-[#00A3FF]">
+                  {avatarToShow ? (
+                    <img src={avatarToShow} alt="Avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    (profile?.full_name?.[0] ?? profile?.username?.[0] ?? email?.[0] ?? 'E').toUpperCase()
+                  )}
                 </div>
                 <div>
                   <p className="text-sm font-medium">
@@ -130,6 +145,14 @@ export default function SettingsPage() {
                         })
                       : '—'}
                   </p>
+                  <a 
+                    href="https://limn-engine-doc.vercel.app/profile" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="mt-2 inline-flex items-center gap-1 text-[10px] text-[#00A3FF] hover:underline"
+                  >
+                    Change avatar in Limn Engine <ExternalLink size={10} />
+                  </a>
                 </div>
               </div>
 
@@ -159,7 +182,7 @@ export default function SettingsPage() {
               <Field label="Email" defaultValue={email} disabled />
               <Field label="User ID" defaultValue={userId ?? ''} disabled />
               <p className="pt-2 text-xs leading-relaxed text-white/35">
-                Email and user ID are managed by authentication.
+                Email and User ID are managed by authentication.
               </p>
             </div>
           )}
