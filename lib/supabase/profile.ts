@@ -9,7 +9,7 @@ export type Profile = {
   role: string | null
   is_verified: boolean
   created_at: string
-  limn_username: string | null // <--- THIS LINE IS CRITICAL
+  limn_username: string | null 
 }
 
 export async function getProfile(
@@ -29,7 +29,7 @@ export async function getProfile(
   return data
 }
 
-export type ProfileUpdate = Partial<Pick<Profile, 'full_name' | 'username' | 'bio' | 'role' | 'limn_username'>> // <--- AND THIS LINE
+export type ProfileUpdate = Partial<Pick<Profile, 'full_name' | 'username' | 'bio' | 'role' | 'limn_username'>>
 
 export async function updateProfile(
   supabase: SupabaseClient,
