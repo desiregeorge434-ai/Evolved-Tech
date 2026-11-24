@@ -36,18 +36,19 @@ export default function DashboardPage() {
       const mail = auth.user.email ?? null
       setEmail(mail)
 
-      // 1. Get Evolved Tech profile (if they set a name here)
+      // 1. Get Evolved Tech profile
       const profile = await getProfile(supabase, auth.user.id)
       let nameToUse = profile?.full_name
 
-      // 2. Get Limn Engine profile using the database function we just created
+      // 2. Get Limn Engine profile using the linked database function
       if (mail) {
         const { data: limnData, error } = await supabase.rpc('get_limn_profile', { user_email: mail })
         
         if (!error && limnData && limnData.length > 0) {
           const limnProfile = limnData[0]
           setAvatar(limnProfile.avatar_url)
-          // If they didn't set a name in Evolved Tech, use their Limn display name
+          
+          // Fallback to Limn name if Evolved Tech name is blank
           if (!nameToUse) nameToUse = limnProfile.display_name || limnProfile.username
         }
       }
@@ -88,14 +89,19 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto max-w-6xl px-6 py-10 lg:px-10 lg:py-14">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#00A3FF]/12 text-xl font-bold text-[#00A3FF] ring-1 ring-white/10 shadow-[0_0_20px_rgba(0,163,255,0.15)]">
-            {avatar ? (
-              <img src={avatar} alt="Avatar" className="h-full w-full object-cover" />
-            ) : (
-              (finalName[0]).toUpperCase()
-            )}
+        <div className="flex items-center gap-5">
+          
+          {/* NEW ANIMATED AVATAR RING */}
+          <div className="animated-ring h-14 w-14 shrink-0 rounded-2xl bg-[#05060a]">
+            <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-2xl bg-[#00A3FF]/12 text-xl font-bold text-[#00A3FF]">
+              {avatar ? (
+                <img src={avatar} alt="Avatar" className="h-full w-full object-cover" />
+              ) : (
+                (finalName[0]).toUpperCase()
+              )}
+            </div>
           </div>
+
           <div>
             <p className="text-[11px] uppercase tracking-[0.22em] text-white/40">Workspace</p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight md:text-4xl">
@@ -112,7 +118,6 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* The rest of the dashboard UI stays exactly the same */}
       <div className="mt-10 grid gap-4 sm:grid-cols-3">
         {stats.map((s) => {
           const Icon = s.icon
