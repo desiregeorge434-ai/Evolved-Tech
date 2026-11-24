@@ -101,9 +101,12 @@ export default function SettingsPage() {
   const avatarToShow = limnData?.avatar_url || profile?.avatar_url
   const accountType = profile?.role || 'Member'
   
-  const memberSince = profile?.created_at 
-    ? new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
-    : 'Recently'
+  // Use the real Limn created_at date, falling back to Evolved Tech's date if missing
+  const memberSince = limnData?.created_at 
+    ? new Date(limnData.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+    : profile?.created_at 
+      ? new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+      : 'Recently'
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-10 lg:px-10 lg:py-14">
