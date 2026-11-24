@@ -84,11 +84,11 @@ export async function loadMyGames(email: string): Promise<MyGame[]> {
   }
 }
 
-export async function loadLimnAvatar(email: string): Promise<string | null> {
-  if (!email) return null
+export async function loadLimnAvatar(limnUsername: string): Promise<string | null> {
+  if (!limnUsername) return null
   try {
     const res = await fetch(
-      `${LIMN_URL}/rest/v1/profiles?select=avatar_url&username=eq.${encodeURIComponent(email)}&limit=1`,
+      `${LIMN_URL}/rest/v1/profiles?select=avatar_url&username=eq.${encodeURIComponent(limnUsername)}&limit=1`,
       { headers }
     )
     if (!res.ok) return null
