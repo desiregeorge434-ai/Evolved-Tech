@@ -49,6 +49,8 @@ export default function PromotePage() {
       setTimeout(() => {
         router.push('/showcase')
       }, 2000)
+    } else {
+      alert("Error posting game: " + error.message)
     }
   }
 
