@@ -11,6 +11,7 @@ import {
   Settings as SettingsIcon,
   Loader2,
   Plus,
+  Link as LinkIcon,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getProfile } from '@/lib/supabase/profile'
@@ -24,6 +25,7 @@ export default function DashboardPage() {
   const [checking, setChecking] = useState(true)
   const [mine, setMine] = useState<MyGame[] | null>(null)
   const [commentsCount, setCommentsCount] = useState<number>(0)
+  const [hasLimnAccount, setHasLimnAccount] = useState(false)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -41,15 +43,20 @@ export default function DashboardPage() {
       let nameToUse = profile?.full_name
 
       if (mail) {
-        // 1. Avatar & Name
+        // 1. Check Limn Profile
         const { data: limnData } = await supabase.rpc('get_limn_profile', { user_email: mail })
+        
         if (limnData && limnData.length > 0) {
           const profileData = limnData[0] as any
           setAvatar(profileData.avatar_url)
+          setHasLimnAccount(true)
           if (!nameToUse) nameToUse = profileData.display_name || profileData.username
+        } else {
+          // No Limn account found
+          setHasLimnAccount(false)
         }
 
-        // 2. Comments (Force parsing to a number just in case)
+        // 2. Comments
         const { data: commentData } = await supabase.rpc('get_limn_user_comments', { user_email: mail })
         if (commentData !== null && commentData !== undefined) {
            setCommentsCount(Number(commentData) || 0)
@@ -90,16 +97,38 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10 lg:px-10 lg:py-14">
+      
+      {/* BANNER: If no Limn account */}
+      {!hasLimnAccount && (
+        <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-2xl border border-[#00A3FF]/20 bg-[#00A3FF]/5 p-6 sm:flex-row sm:items-center">
+          <div>
+            <h2 className="text-sm font-semibold text-white">Connect your Limn Engine account</h2>
+            <p className="mt-1 text-xs text-white/50">
+              We couldn't find a Limn account linked to {email}. Create one to publish games and sync your avatar.
+            </p>
+          </div>
+          <a
+            href="https://limn-engine-doc.vercel.app/register"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#00A3FF] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#0089d6]"
+          >
+            <LinkIcon size={14} />
+            Create Limn Account
+          </a>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex items-center gap-4">
           
-          {/* Glossy Milky Avatar */}
+          {/* Avatar with Fallback */}
           <div className="glassy-avatar-wrapper h-16 w-16 shrink-0">
             <div className="glassy-avatar-inner">
               {avatar ? (
                 <img src={avatar} alt="Avatar" className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-[#00A3FF]/10 text-xl font-bold text-[#00A3FF]">
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#00A3FF]/20 to-black text-xl font-bold text-[#00A3FF]">
                   {(finalName[0]).toUpperCase()}
                 </div>
               )}
