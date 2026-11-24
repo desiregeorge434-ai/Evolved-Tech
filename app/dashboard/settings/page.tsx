@@ -135,15 +135,17 @@ export default function SettingsPage() {
             <div className="space-y-6">
               <div className="flex items-center gap-5">
                 
-                {/* Spinning Circular Avatar */}
-                <div className="animated-avatar-ring h-16 w-16 shrink-0">
-                  {avatarToShow ? (
-                    <img src={avatarToShow} alt="Avatar" className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-[#00A3FF]/12 text-2xl font-bold text-[#00A3FF]">
-                      {(displayName[0] ?? 'E').toUpperCase()}
-                    </div>
-                  )}
+                {/* THE NEW GLASSY MILKY AVATAR */}
+                <div className="glassy-avatar-wrapper h-20 w-20 shrink-0">
+                  <div className="glassy-avatar-inner">
+                    {avatarToShow ? (
+                      <img src={avatarToShow} alt="Avatar" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-[#00A3FF]/10 text-2xl font-bold text-[#00A3FF]">
+                        {(displayName[0] ?? 'E').toUpperCase()}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
