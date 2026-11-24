@@ -8,22 +8,22 @@ const TIMELINE = [
   {
     year: '2023',
     title: 'JGame',
-    body: 'A first attempt at a reusable game loop. Unpublished, unfinished, real.',
+    body: 'A first attempt at a reusable game loop. Unpublished, unfinished, real. Built behind a sister\'s back on a Thinkpad that hung like hell, with one eye on the screen and one ear on the footsteps.',
   },
   {
     year: '2024',
     title: 'TCGame → TCJSGame',
-    body: 'The tile class, the flow state, the first version that felt like an engine.',
+    body: 'The tile class, the flow state, the first version that felt like an engine. Coded on a brother\'s HP—this time with permission. The fear of being caught was replaced by the fear of not shipping.',
   },
   {
     year: '2025',
     title: 'Limn Engine',
-    body: 'Fourth generation. One file, zero dependencies, dual-canvas renderer.',
+    body: 'Fourth generation. One file, zero dependencies. The breakthrough was not a feature—it was moving a Base64 cache out of the frame loop. 4 FPS became 60. A 94/100 engine built on a Toshiba with 4GB of RAM.',
   },
   {
     year: '2026',
     title: 'Limn Studio',
-    body: 'The editor to build in and the arcade to publish to. Games with somewhere to live.',
+    body: 'The editor to build in and the arcade to publish to. Games with somewhere to live. The engine finally had a home.',
   },
   {
     year: 'Next',
@@ -35,11 +35,11 @@ const TIMELINE = [
 const VALUES = [
   {
     title: 'Common outcomes are functions',
-    body: 'If you write it in every game, it belongs in the engine. Bounds, cameras, particles, shakes — named, not memorised.',
+    body: 'If you write it in every game, it belongs in the engine. Bounds, cameras, particles, shakes—named, not memorised.',
   },
   {
     title: 'Respect the machine',
-    body: 'Built on a Toshiba with 4GB of RAM. Nothing here assumes a fast laptop, a good connection, or a build step.',
+    body: 'Built on a Toshiba with 4GB of RAM and a Tecno Pop 4 with 1GB. Nothing here assumes a fast laptop, a good connection, or a build step.',
   },
   {
     title: 'Respect your time',
@@ -56,7 +56,7 @@ export default function AboutPage() {
       </h1>
       <p className="mt-6 max-w-2xl text-sm leading-relaxed text-white/50 md:text-base">
         Evolved Tech is a game technology company in Lagos, Nigeria. We build tools that get out of
-        the way — engines that evolve with the people using them.
+        the way—engines that evolve with the people using them.
       </p>
 
       <div className="mt-16 grid gap-4 md:grid-cols-2">
@@ -68,20 +68,30 @@ export default function AboutPage() {
         <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">The story</h2>
         <div className="mt-6 space-y-5 text-sm leading-relaxed text-white/55 md:text-base">
           <p>
-            Limn began on a Toshiba with 4GB of RAM, with offline W3Schools and no mentor. No
-            internet most of the time, no team, no funding. Just a question that would not go away:
+            Limn began with a question that would not go away:
             <span className="text-white"> why do I write the same code in every game?</span>
           </p>
           <p>
-            Edge detection, camera maths, collision loops, screen shake, particle setup — the same
-            work in every project. So the first versions were an attempt to name those things once.
-            JGame became TCGame, TCGame became TCJSGame, and the fourth generation became Limn.
+            There was no laptop at first. Kehinde learned on a button phone, Googling code and
+            writing it down on paper because there was nowhere to save files. When his sister got a
+            Toshiba, he coded on it behind her back—closing the lid at the sound of footsteps. When
+            his brother David got an HP, he was finally allowed to work without hiding. Three
+            laptops. Two siblings. One engine that kept evolving because the alternative was writing
+            edge detection and camera math for the hundredth time.
           </p>
           <p>
             The breakthrough was not a feature. It was finding that the engine was converting the
             entire canvas to Base64 sixty times a second. Moving that cache out of the frame loop
             took it from 4 frames per second to 60. That is the dual-renderer: draw the static world
-            once, paste it every frame.
+            once, paste it every frame. Limn scored 94/100 on SitePoint and ran at full speed on a
+            Tecno Pop 4 with 1GB of RAM—because respecting the machine was never optional.
+          </p>
+          <p className="text-white/40">
+            Desire joined as co-founder to build the other half of the ecosystem: the editor, the
+            arcade, the marketing, the video design, the publicity that turns a tool into a
+            community. He works in Python, Three.js, and JavaScript, and is drawn to AI and
+            animation. His ambition for Evolved Tech is simple and enormous—to become a company on
+            the scale of Unity, and to build Limn 3D as the next step in the same philosophy.
           </p>
         </div>
 
@@ -132,25 +142,28 @@ export default function AboutPage() {
               Founder — Engine
             </p>
             <p className="mt-3 text-sm leading-relaxed text-white/45">
-              Built the core of Limn Engine: the renderer, the component model, the camera, the
-              particles. Four generations of it.
+              Built Limn Engine across four generations on borrowed laptops and a button phone.
+              Wrote code on paper before he ever typed it. Scored 94/100 on SitePoint and still
+              checks whether the thing runs on 1GB of RAM before calling it done.
             </p>
           </div>
 
           <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-5">
             <ImageSlot
               src="/images/desire.jpg"
-              alt="Olu Desire"
+              alt="Olu Desire George"
               label="Portrait"
               ratio="aspect-[4/3]"
             />
-            <h3 className="mt-5 text-base font-semibold">Olu Desire</h3>
+            <h3 className="mt-5 text-base font-semibold">Olu Desire George</h3>
             <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[#00A3FF]">
-              Co-founder — Product
+              Co-founder — Product & Growth
             </p>
             <p className="mt-3 text-sm leading-relaxed text-white/45">
-              Built the editor, the arcade, profiles, leaderboards, comments and everything around
-              the engine that makes a game publishable.
+              Handles the marketing, video design, and publicity that turn an engine into an
+              ecosystem. Works in Python, Three.js, and JavaScript, with an eye on AI and animation.
+              Wants Evolved Tech to become a multibillion company like Unity—and wants Limn 3D to be
+              the next thing that gets there.
             </p>
           </div>
         </div>
