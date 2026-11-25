@@ -12,6 +12,7 @@ import {
   Loader2,
   Plus,
   Lock,
+  ShieldCheck,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getProfile } from '@/lib/supabase/profile'
@@ -27,6 +28,9 @@ export default function DashboardPage() {
   const [mine, setMine] = useState<MyGame[] | null>(null)
   const [commentsCount, setCommentsCount] = useState<number>(0)
   const [failed, setFailed] = useState(false)
+
+  // Check if current user is the admin
+  const isAdmin = email === 'desiregeorge434@gmail.com'
 
   useEffect(() => {
     const supabase = createClient()
@@ -74,7 +78,6 @@ export default function DashboardPage() {
     )
   }
 
-  // BEAUTIFUL LOGGED-OUT SCREEN
   if (!isLoggedIn) {
     return (
       <div className="mx-auto flex min-h-[75vh] max-w-lg flex-col items-center justify-center px-6 text-center">
@@ -103,7 +106,6 @@ export default function DashboardPage() {
     )
   }
 
-  // LOGGED-IN DASHBOARD
   const gamesCount = mine?.length ?? 0
   const totalPlays = mine?.reduce((acc, game) => acc + (game.plays || 0), 0) ?? 0
   const finalName = displayName || (email ? email.split('@')[0] : 'Creator')
@@ -253,26 +255,22 @@ export default function DashboardPage() {
         <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-6 backdrop-blur-sm">
           <h2 className="text-sm font-semibold">Jump to</h2>
           <div className="mt-5 flex flex-col gap-2">
-            {[
-              { label: 'The arcade', href: arcadeUrl() },
-              { label: 'Build a game', href: 'https://limn-engine-doc.vercel.app/editor/' },
-              { label: 'Engine docs', href: 'https://limn-engine-doc.vercel.app/tutorial.html' },
-              { label: 'Roadmap', href: '/roadmap' },
-            ].map((a) => (
-              <a
-                key={a.label}
-                href={a.href}
-                target={a.href.startsWith('http') ? '_blank' : undefined}
-                rel="noreferrer"
-                className="flex items-center justify-between rounded-xl border border-white/8 px-4 py-3 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+            
+            {/* ADMIN ONLY LINK */}
+            {isAdmin && (
+              <Link
+                href="/dashboard/review"
+                className="flex items-center justify-between rounded-xl border border-[#00A3FF]/30 bg-[#00A3FF]/5 px-4 py-3 text-sm font-medium text-[#00A3FF] transition-colors hover:bg-[#00A3FF]/10"
               >
-                {a.label}
-                <ArrowUpRight size={14} className="text-white/30" />
-              </a>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+                <span className="flex items-center gap-2">
+                  <ShieldCheck size={16} /> Admin Review
+                </span>
+                <ArrowUpRight size={14} className="opacity-70" />
+              </Link>
+            )}
+
+            {[
+              { label: 'Showcase Games', href: '/showcase' },
+              { label: 'Post Your Game', href: '/dashboard/promote' },
+              { label: 'The arcade', href: arcadeUrl() },
+              { label: '
