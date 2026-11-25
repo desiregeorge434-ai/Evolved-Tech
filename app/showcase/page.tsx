@@ -26,16 +26,20 @@ export default function ShowcasePage() {
     const supabase = createClient()
 
     const fetchData = async () => {
+      // 1. Get User
       const { data: { user } } = await supabase.auth.getUser()
       if (user) setUserId(user.id)
 
+      // 2. Get Approved Games Only
       const { data: gamesData } = await supabase
         .from('promoted_games')
         .select('*')
+        .eq('status', 'approved') // <--- ONLY SHOW APPROVED
         .order('created_at', { ascending: false })
       
       if (gamesData) setGames(gamesData)
 
+      // 3. Get User's Likes
       if (user) {
         const { data: likesData } = await supabase
           .from('promoted_likes')
@@ -111,8 +115,10 @@ export default function ShowcasePage() {
                   {game.image_url ? (
                     <img src={game.image_url} alt={game.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                   ) : (
-                    <div className="flex h-full items-center justify-center">
-                      <Gamepad2 size={32} className="text-white/10" />
+                    <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-[#00A3FF]/20 via-black to-black">
+                      <span className="text-4xl font-black text-white/20 tracking-widest uppercase">
+                        {game.title.slice(0, 2)}
+                      </span>
                     </div>
                   )}
                 </div>
