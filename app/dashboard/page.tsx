@@ -273,4 +273,22 @@ export default function DashboardPage() {
               { label: 'Showcase Games', href: '/showcase' },
               { label: 'Post Your Game', href: '/dashboard/promote' },
               { label: 'The arcade', href: arcadeUrl() },
-              { label: '
+              { label: 'Engine docs', href: 'https://limn-engine-doc.vercel.app/tutorial.html' },
+            ].map((a) => (
+              <a
+                key={a.label}
+                href={a.href}
+                target={a.href.startsWith('http') ? '_blank' : undefined}
+                rel="noreferrer"
+                className="flex items-center justify-between rounded-xl border border-white/8 px-4 py-3 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+              >
+                {a.label}
+                <ArrowUpRight size={14} className="text-white/30" />
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
