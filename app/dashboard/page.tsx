@@ -29,7 +29,6 @@ export default function DashboardPage() {
   const [commentsCount, setCommentsCount] = useState<number>(0)
   const [failed, setFailed] = useState(false)
 
-  // Check if current user is the admin
   const isAdmin = email === 'desiregeorge434@gmail.com'
 
   useEffect(() => {
@@ -256,7 +255,6 @@ export default function DashboardPage() {
           <h2 className="text-sm font-semibold">Jump to</h2>
           <div className="mt-5 flex flex-col gap-2">
             
-            {/* ADMIN ONLY LINK */}
             {isAdmin && (
               <Link
                 href="/dashboard/review"
